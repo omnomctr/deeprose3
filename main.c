@@ -10,7 +10,7 @@ char *get_line(FILE *);
 
 int main(int argc, char *argv[])
 {
-    Arena *lexer_arena = arena_new(sizeof(Lexer) * 2);
+    Arena *lexer_arena = arena_new(0);
     for (;;) {
         printf("=> "); fflush(stdout);
         char* line = get_line(stdin);
