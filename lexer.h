@@ -22,6 +22,7 @@ enum TokenType {
     t_IDENT,
     t_NUM,
     t_EOF,
+    t_ILLEGAL,
 };
 
 typedef struct Token {

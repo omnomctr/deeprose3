@@ -19,5 +19,6 @@ struct Arena {
 Arena *arena_new(size_t capacity);
 void arena_destroy(Arena *a);
 void *arena_alloc(Arena *a, size_t size);
+void arena_clear(Arena *a);
 
 #endif

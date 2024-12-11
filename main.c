@@ -10,16 +10,14 @@ char *get_line(FILE *);
 
 int main(int argc, char *argv[])
 {
+    Arena *lexer_arena = arena_new(0);
     for (;;) {
         printf("=> "); fflush(stdout);
         char* line = get_line(stdin);
         if (strcmp(line, "exit") == 0) {
-            free(line); exit(0);
+            free(line); break;
         }
 
-        /* if I was smarter I would probably make an arena_clear function so 
-         * I could reuse this allocation but whatever */
-        Arena *lexer_arena = arena_new(0);
         Lexer *lex = lexer_new(line, lexer_arena);
 
         Token *t;
@@ -28,9 +26,11 @@ int main(int argc, char *argv[])
             token_print(t);
             putchar('\n');
         } while (t->type != t_EOF);
-        arena_destroy(lexer_arena);
+        arena_clear(lexer_arena);
         free(line);
     }
+
+    arena_destroy(lexer_arena); 
     return 0;
 }
 

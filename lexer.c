@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include "lexer.h"
 #include "util.h"
 
@@ -11,8 +12,11 @@ static void _lexer_read_char(Lexer *l);
 
 static Token *_token_new(Lexer *l, enum TokenType t);
 static Token *_read_string(Lexer *l);
+static Token *_read_number(Lexer *l);
 static Token *_read_identifier(Lexer *l);
 static Token* _lexer_read(Lexer *l, enum TokenType type, bool(*pred)(char));
+
+static bool _is_identifier_special_char(char c);
 
 Lexer *lexer_new(const char *str, Arena *a)
 {
@@ -41,14 +45,17 @@ Token *lexer_next_token(Lexer *l)
         case '\0': tok = _token_new(l, t_EOF); break;
         case '(': tok = _token_new(l, t_LPAREN); break;
         case ')': tok = _token_new(l, t_RPAREN); break;
-
         case '"': tok = _read_string(l); break;
         default:
-            if (isalpha(l->ch)) {
+            if (isalpha(l->ch) || _is_identifier_special_char(l->ch)) {
                 tok = _read_identifier(l);
                 break;
+            } else if (isdigit(l->ch)) {
+                tok = _read_number(l);
+                break;
             }
-            assert(0 && "TODO");
+            
+            tok = _token_new(l, t_ILLEGAL);
     }
 
     _lexer_read_char(l);
@@ -78,8 +85,9 @@ void token_print(Token *t)
             _print_token_string_slice(t);
             printf("}");
             break;
-        default: assert(0 && "todo");
-    };
+        case t_NUM: printf("{number %d}", t->num); break;
+        case t_ILLEGAL: printf("{illegal token: line %zu}", t->line); break;
+    }
 }
 
 static void _lexer_skip_whitespace(Lexer *l)
@@ -118,8 +126,13 @@ static Token *_read_string(Lexer *l)
 
 static bool _is_identifier_letter(char c)
 {
-    if (isalnum(c)) return true;
+    return isalnum(c) || _is_identifier_special_char(c);
+}
 
+
+
+static bool _is_identifier_special_char(char c)
+{
     char *allowed_characters = "?!<>=%^*+-/";
     for (; *allowed_characters != '\0'; allowed_characters++)
         if (*allowed_characters == c) return true;
@@ -130,6 +143,23 @@ static bool _is_identifier_letter(char c)
 static Token *_read_identifier(Lexer *l)
 {
     return _lexer_read(l, t_IDENT, _is_identifier_letter);
+}
+
+static bool _is_digit(char c) { return isdigit(c); }
+static Token *_read_number(Lexer *l)
+{
+    Token *t = _lexer_read(l, t_NUM, _is_digit);
+
+    int32_t num = 0;
+    for (size_t i = 0; i < t->string_slice.len; i++) {
+        num *= 10;
+        num += (int32_t)t->string_slice.ptr[i] - (int32_t)'0';
+    }
+
+    /* overwrite the stringslice struct */
+    t->num = num;
+
+    return t;
 }
 
 static Token* _lexer_read(Lexer *l, enum TokenType type, bool(*pred)(char)) 
@@ -151,3 +181,4 @@ static Token* _lexer_read(Lexer *l, enum TokenType type, bool(*pred)(char))
 
    return ret;
 }
+

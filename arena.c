@@ -38,3 +38,10 @@ void *arena_alloc(Arena *a, size_t size)
         return ptr;
     }
 }
+
+/* clears the arena for reuse */
+void arena_clear(Arena *a)
+{
+   a->cursor = 0;
+   if (a->next) arena_clear(a->next);
+}
