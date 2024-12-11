@@ -47,11 +47,11 @@ Token *lexer_next_token(Lexer *l)
         case ')': tok = _token_new(l, t_RPAREN); break;
         case '"': tok = _read_string(l); break;
         default:
-            if (isalpha(l->ch) || _is_identifier_special_char(l->ch)) {
-                tok = _read_identifier(l);
-                break;
-            } else if (isdigit(l->ch)) {
+            if (isdigit(l->ch) || l->ch == '-') {
                 tok = _read_number(l);
+                break;
+            } else if (isalpha(l->ch) || _is_identifier_special_char(l->ch)) {
+                tok = _read_identifier(l);
                 break;
             }
             
@@ -148,13 +148,27 @@ static Token *_read_identifier(Lexer *l)
 static bool _is_digit(char c) { return isdigit(c); }
 static Token *_read_number(Lexer *l)
 {
+    _lexer_read_char(l);
     Token *t = _lexer_read(l, t_NUM, _is_digit);
+    
+    /* hacky thing I did here - basically if the number is negative than 
+     * the _is_digit predicate will be wrong for the first digit (the negative).
+     * I decided to have a special case at the start for the negative that you
+     * can see in the lexer_next_token function, but we have to read a char and then
+     * decrement the slice ptr, increment the slice length for everything to work. */
 
+    t->string_slice.ptr--;
+    t->string_slice.len++;
+
+    /* TODO: support double negative ie. --1. in python that would give you positive 1, 
+     * here it gives you a 0 token, and then the positive number token */
     int32_t num = 0;
-    for (size_t i = 0; i < t->string_slice.len; i++) {
+    bool is_negative_num = t->string_slice.ptr[0] == '-';
+    for (size_t i = is_negative_num ? 1 : 0; i < t->string_slice.len; i++) {
         num *= 10;
         num += (int32_t)t->string_slice.ptr[i] - (int32_t)'0';
     }
+    if (is_negative_num) num *= -1;
 
     /* overwrite the stringslice struct */
     t->num = num;

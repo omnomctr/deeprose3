@@ -3,6 +3,13 @@
 
 #include <stddef.h>
 
+/* The arena is implemented as a super simple bump allocator, 
+ * meaning no reallocs, no induvidual frees. 
+ * However, when an allocation size requires more than 
+ * the arena's capacity, to avoid expensive reallocs, 
+ * I made a linked list sort of thingy, attaching arenas together */
+
+
 typedef char unit;
 _Static_assert(sizeof(unit) == 1, "");
 
@@ -12,7 +19,7 @@ typedef struct Arena Arena;
 struct Arena {
     size_t cursor;
     size_t capacity;
-    Arena* next; /* nullable */
+    Arena *next; /* nullable */
     unit pool[]; /* flexible array member */
 };
 
