@@ -47,12 +47,15 @@ Token *lexer_next_token(Lexer *l)
         case ')': tok = _token_new(l, t_RPAREN); break;
         case '"': tok = _read_string(l); break;
         default:
-            if (isdigit(l->ch) || l->ch == '-') {
+            /* I'm doing some weird stuff here to check for a unary minus ie -1 
+             * double negatives become identifiers now */
+            if (isdigit(l->ch) || (l->ch == '-' && isdigit(l->str[l->pos + 1]))) {
                 tok = _read_number(l);
+                return tok;
                 break;
             } else if (isalpha(l->ch) || _is_identifier_special_char(l->ch)) {
                 tok = _read_identifier(l);
-                break;
+                return tok;
             }
             
             tok = _token_new(l, t_ILLEGAL);
@@ -133,7 +136,7 @@ static bool _is_identifier_letter(char c)
 
 static bool _is_identifier_special_char(char c)
 {
-    char *allowed_characters = "?!<>=%^*+-/";
+    char *allowed_characters = "?!<>=%^*+-/-_";
     for (; *allowed_characters != '\0'; allowed_characters++)
         if (*allowed_characters == c) return true;
 
