@@ -10,12 +10,15 @@ char *get_line(FILE *);
 
 int main(int argc, char *argv[])
 {
-    Arena *lexer_arena = arena_new(0);
+    Arena *lexer_arena = arena_new(sizeof(Lexer) * 2);
     for (;;) {
         printf("=> "); fflush(stdout);
         char* line = get_line(stdin);
         if (strcmp(line, "exit") == 0) {
             free(line); break;
+        }
+        if (strcmp(line, "") == 0) {
+            free(line); continue;
         }
 
         Lexer *lex = lexer_new(line, lexer_arena);
