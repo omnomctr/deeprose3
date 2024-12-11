@@ -17,14 +17,17 @@ int main(int argc, char *argv[])
             free(line); exit(0);
         }
 
+        /* if I was smarter I would probably make an arena_clear function so 
+         * I could reuse this allocation but whatever */
         Arena *lexer_arena = arena_new(0);
         Lexer *lex = lexer_new(line, lexer_arena);
 
         Token *t;
-        while ((t = lexer_next_token(lex)) != NULL) {
-            token_print(t); printf("\n");
-        }
-
+        do {
+            t = lexer_next_token(lex);
+            token_print(t);
+            putchar('\n');
+        } while (t->type != t_EOF);
         arena_destroy(lexer_arena);
         free(line);
     }
