@@ -4,8 +4,8 @@
 #include <ctype.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <assert.h>
 #include "lexer.h"
-#include "util.h"
 
 static void _lexer_skip_whitespace(Lexer *l);
 static void _lexer_read_char(Lexer *l);
@@ -20,8 +20,7 @@ static bool _is_identifier_special_char(char c);
 
 Lexer *lexer_new(const char *str, Arena *a)
 {
-    Lexer *ret = malloc(sizeof(Lexer));
-    CHECK_ALLOC(ret);
+    Lexer *ret = arena_alloc(a, sizeof(Lexer));
 
     *ret = (Lexer) {
         .pos = 0,
