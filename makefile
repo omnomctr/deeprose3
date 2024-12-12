@@ -6,7 +6,7 @@ all: $(BUILDDIR)/deeprose
 
 run:
 	@make all
-	rlwrap ./$(BUILDDIR)/deeprose
+	rlwrap $(BUILDDIR)/deeprose
 
 $(BUILDDIR)/%.o: %.c %.h
 	@mkdir -p $(BUILDDIR)

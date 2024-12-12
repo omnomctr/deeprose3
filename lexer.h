@@ -42,4 +42,12 @@ Token *lexer_next_token(Lexer *l);
 
 void token_print(Token *t);
 
+typedef struct TokenLL TokenLL;
+struct TokenLL {
+    Token *token;
+    TokenLL *next; /* nullable */
+};
+
+TokenLL *lexer_collect_tokens(Lexer *l);
+
 #endif

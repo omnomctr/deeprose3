@@ -22,13 +22,13 @@ int main(int argc, char *argv[])
         }
 
         Lexer *lex = lexer_new(line, lexer_arena);
-
-        Token *t;
+        TokenLL *tokens_list = lexer_collect_tokens(lex);
+        /* print out all the tokens */
         do {
-            t = lexer_next_token(lex);
-            token_print(t);
+            token_print(tokens_list->token);
             putchar('\n');
-        } while (t->type != t_EOF);
+        } while ((tokens_list = tokens_list->next) != NULL);
+
         arena_clear(lexer_arena);
         free(line);
     }

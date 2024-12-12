@@ -132,8 +132,6 @@ static bool _is_identifier_letter(char c)
     return isalnum(c) || _is_identifier_special_char(c);
 }
 
-
-
 static bool _is_identifier_special_char(char c)
 {
     char *allowed_characters = "?!<>=%^*+-/-_";
@@ -197,5 +195,26 @@ static Token* _lexer_read(Lexer *l, enum TokenType type, bool(*pred)(char))
    ret->string_slice.len = l->pos - original_pos;
 
    return ret;
+}
+
+TokenLL *lexer_collect_tokens(Lexer *l)
+{
+    TokenLL *node = arena_alloc(l->arena, sizeof(TokenLL));
+    TokenLL *ret = node;
+    Token *t;
+    for (;;) {
+        t = lexer_next_token(l);
+        node->token = t;
+        
+        if (t->type == t_EOF) {
+            node->next = NULL;
+            break;
+        } else {
+            node->next = arena_alloc(l->arena, sizeof(TokenLL));
+            node = node->next;
+        }
+    }
+
+    return ret;
 }
 
