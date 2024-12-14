@@ -14,7 +14,7 @@ $(BUILDDIR)/%.o: %.c %.h
 	mv *.o $(BUILDDIR)/
 	mv *.h.gch $(BUILDDIR)/
 
-$(BUILDDIR)/deeprose: $(BUILDDIR)/lexer.o $(BUILDDIR)/arena.o main.c
+$(BUILDDIR)/deeprose: $(BUILDDIR)/lexer.o $(BUILDDIR)/arena.o $(BUILDDIR)/object.o main.c
 	@mkdir -p $(BUILDDIR)
 	$(CC) $(CFLAGS) -o $@ $^
 
