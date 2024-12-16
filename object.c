@@ -24,6 +24,7 @@ Object *object_new_generic(void)
 {
     Object *ret = malloc(sizeof(Object));
     CHECK_ALLOC(ret);
+    DBG("creating object at %p", ret);
     ret->gc_mark = NOT_MARKED;
     ret->obj_next = GC.obj_list;
     GC.obj_list = ret;
@@ -61,6 +62,7 @@ Object *object_list_new(Object *car, Object *cdr)
 
 void object_free(Object *o)
 {
+    DBG("freeing object at %p", o);
     if (o->kind == O_STR || o->kind == O_IDENT) 
         free(o->str.ptr);
     free(o);

@@ -8,10 +8,10 @@
     assert((ptr) && "ran out of memory");
 
 #ifdef DEBUG
-#define DBG(fmt, __VA_ARGS__) \
-    fprintf(stderr, fmt __VA_OPT_(,)_ __VA_ARGS__);
+#define DBG(fmt, ...) \
+    fprintf(stderr, fmt "\n" __VA_OPT__(,) __VA_ARGS__);
 #else
-#define DBG(__VA_ARGS)
+#define DBG(...)
 #endif
 
 #endif

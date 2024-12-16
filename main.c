@@ -4,31 +4,12 @@
 #include <string.h>
 #include "util.h"
 #include "arena.h"
-#include "object.h"
 
 /* return malloc'ed string of line until newline */
 char *get_line(FILE *);
 
 int main(int argc, char *argv[])
 {
-    /*  just some testing for the gc that I'd like to keep around */
-#if 0
-    char msg[] = "hello, world!";
-    Object *string_slice = object_string_slice_new(msg, strlen(msg));
-
-    char msg2[] = "hello, world!";
-    Object *string_slice2 = object_string_slice_new(msg2, strlen(msg2));
-    
-    Object *list = object_list_new(string_slice, 
-            object_list_new(string_slice2, NULL));
-    (void)list;
-    GC_add_mark_source(string_slice2);
-
-    GC_enable(true);
-    GC_collect_garbage();
-    GC_debug_print_status();
-#endif
-
     Arena *lexer_arena = arena_new(0);
     for (;;) {
         printf("=> "); fflush(stdout);
