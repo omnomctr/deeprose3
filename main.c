@@ -56,7 +56,9 @@ char *get_line(FILE *f)
     CHECK_ALLOC(str.ptr);
 
     int ch;
-    while ((ch = fgetc(f)) != EOF && ch != '\n') {
+    while ((ch = fgetc(f)) != '\n') {
+        /* C-D quits if its on a new line (standard unix behaviour) */ 
+        if (ch == EOF && str.len == 0) { putchar('\n'); exit(0); }
         /* the plus one is for the null character at the end */
         if (str.len + 1 >= str.capacity) {
             str.capacity *= 2;
@@ -67,7 +69,7 @@ char *get_line(FILE *f)
 
         str.ptr[str.len++] = (char)ch;
     }
-    
+
     str.ptr[str.len++] = '\0';
 
     /* shrink vec */
