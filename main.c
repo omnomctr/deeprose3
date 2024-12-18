@@ -4,6 +4,8 @@
 #include <string.h>
 #include "util.h"
 #include "arena.h"
+#include "object.h"
+#include "parser.h"
 
 /* return malloc'ed string of line until newline */
 char *get_line(FILE *);
@@ -22,12 +24,19 @@ int main(int argc, char *argv[])
         }
 
         Lexer *lex = lexer_new(line, lexer_arena);
-        TokenLL *tokens_list = lexer_collect_tokens(lex);
-        /* print out all the tokens */
-        do {
-            token_print(tokens_list->token);
+        Parser *parser = parser_new(lex);
+
+        Object *o = parser_parse(parser);
+        for (;;) {
+            if (parser->error) { printf("parser has error \"%s\"", parser_error_string(parser)); }
+            else if (o == NULL) break;
+            else object_print(o);
             putchar('\n');
-        } while ((tokens_list = tokens_list->next) != NULL);
+
+            if (parser_at_eof(parser)) break;
+            o = parser_parse(parser);
+        }
+        
 
         arena_clear(lexer_arena);
         free(line);

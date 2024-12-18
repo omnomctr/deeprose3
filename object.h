@@ -24,7 +24,7 @@ struct List {
 };
 
 enum ObjectKind {
-    O_STR, O_NUM, O_LIST, O_IDENT,
+    O_STR, O_NUM, O_LIST, O_IDENT, O_NIL,
 };
 
 struct Object {
@@ -39,11 +39,15 @@ struct Object {
    };
 };
 
+Object *object_new_generic(void);
 Object *object_list_new(Object *car, Object *cdr);
 Object *object_string_slice_new(const char *s, size_t len);
+Object *object_num_new(int32_t num);
+Object *object_nil_new(void);
+void object_print(Object *o);
 void object_free(Object *o);
+
 void GC_collect_garbage(void);
-void GC_enable(bool yes);
 void GC_debug_print_status(void);
 int  GC_add_mark_source(Object *mark_source);
 
