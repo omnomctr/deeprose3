@@ -36,6 +36,8 @@ int main(int argc, char *argv[])
             if (parser_at_eof(parser)) break;
             o = parser_parse(parser);
         }
+
+        GC_collect_garbage();
         
 
         arena_clear(lexer_arena);
@@ -55,7 +57,8 @@ char *get_line(FILE *f)
 
     int ch;
     while ((ch = fgetc(f)) != EOF && ch != '\n') {
-        if (str.len >= str.capacity) {
+        /* the plus one is for the null character at the end */
+        if (str.len + 1 >= str.capacity) {
             str.capacity *= 2;
             str.ptr = realloc(str.ptr, sizeof(char) * str.capacity);
             /* normally you really should have a temporary ptr for realloc, bc realloc might fail and then you have a heap allocation you can't access, but I have made the executive decision that running out of memory crashes the program so it wont matter :) */
@@ -64,7 +67,7 @@ char *get_line(FILE *f)
 
         str.ptr[str.len++] = (char)ch;
     }
-
+    
     str.ptr[str.len++] = '\0';
 
     /* shrink vec */
