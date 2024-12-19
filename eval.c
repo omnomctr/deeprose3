@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <setjmp.h>
+#include <stdio.h>
 #include "eval.h"
 
 jmp_buf on_error_jmp_buf;
@@ -83,7 +84,7 @@ _Noreturn void report_error(Object *o)
 
 static Object *_builtin_add(Object *o)
 {
-    assert(o->kind == O_LIST);
+    EASSERT(o->kind == O_LIST, "+ requires arguments");
     int32_t num = 0;
     while (o->kind == O_LIST) {
         Object *to_add = eval_expr(o->list.car);
@@ -96,7 +97,7 @@ static Object *_builtin_add(Object *o)
 
 static Object *_builtin_subtract(Object *o)
 {
-    assert(o->kind == O_LIST);
+    EASSERT(o->kind == O_LIST, "- requires arguments");
     Object *lhs_object = eval_expr(o->list.car);
     EASSERT_TYPE("-", lhs_object, O_NUM);
     int32_t lhs = lhs_object->num;
@@ -116,7 +117,7 @@ static Object *_builtin_subtract(Object *o)
 
 static Object *_builtin_multiply(Object *o) 
 {
-    assert(o->kind == O_LIST);
+    EASSERT(o->kind == O_LIST, "* requires arguments");
     int32_t num = 1;
 
     while (o->kind == O_LIST) {
@@ -131,7 +132,7 @@ static Object *_builtin_multiply(Object *o)
 
 static Object *_builtin_divide(Object *o) 
 {
-    assert(o->kind == O_LIST);
+    EASSERT(o->kind == O_LIST, "/ requires arguments");
     Object *lhs_object = eval_expr(o->list.car);
     EASSERT_TYPE("/", lhs_object, O_NUM);
     int32_t lhs = lhs_object->num;
@@ -149,7 +150,7 @@ static Object *_builtin_divide(Object *o)
 
 static Object *_builtin_exit(Object *o)
 {
-    assert(o->kind == O_LIST);
+    EASSERT(o->kind == O_LIST, "exit requires arguments");
     Object *exit_code_object = eval_expr(o->list.car);
     EASSERT_TYPE("exit", exit_code_object, O_NUM);
     exit(exit_code_object->num);
@@ -170,7 +171,7 @@ static Object *_builtin_cons(Object *o)
 
 static Object *_builtin_eval(Object *o) 
 {
-    assert(o->kind == O_LIST);
+    EASSERT(o->kind == O_LIST, "eval requires an argument");
     Object *quoted_item = eval_expr(o->list.car);
     EASSERT(!quoted_item->eval, "eval: already evaluated");
     quoted_item->eval = true;
@@ -179,7 +180,7 @@ static Object *_builtin_eval(Object *o)
 
 static Object *_builtin_first(Object *o)
 {
-    assert(o->kind == O_LIST);
+    EASSERT(o->kind == O_LIST, "first requires an argument");
     Object *arg1 = eval_expr(o->list.car);
     EASSERT_TYPE("first", arg1, O_LIST);
 
@@ -188,7 +189,7 @@ static Object *_builtin_first(Object *o)
 
 static Object *_builtin_rest(Object *o)
 {
-    assert(o->kind == O_LIST);
+    EASSERT(o->kind == O_LIST, "rest requires an argument");
     Object *arg1 = eval_expr(o->list.car);
     EASSERT_TYPE("rest", arg1, O_LIST);
 
@@ -197,12 +198,12 @@ static Object *_builtin_rest(Object *o)
 
 static Object *_eval_sexpr(Object *o)
 {
-    /* TODO: so currently evaluating sexpr is completely backwards, it just checks the identifier
-     * from a builtins list rather than getting the eval for identifiers part give it the function. 
-     * thats because I havent set up the environment / scoping stuff yet */
     assert(o->kind == O_LIST);
     EASSERT(o->list.car->kind == O_IDENT, "first element in list must be an identifier");
     EASSERT(o->list.cdr->kind == O_LIST || o->list.cdr->kind == O_NIL, "invalid function call (did you try to run a pair (f . x) ?");
-
-   return eval_expr(o->list.car)->builtin(o->list.cdr);  
+ 
+    o->list.car->eval = true;
+    Object *f = eval(o->list.car);
+    assert(f->kind == O_BUILTIN);
+    return f->builtin(o->list.cdr);  
 }

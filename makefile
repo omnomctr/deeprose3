@@ -1,5 +1,5 @@
 BUILDDIR = ./.build
-CFLAGS = -Wall 
+CFLAGS = -Wall -ggdb
 CC = gcc
 
 all: $(BUILDDIR)/deeprose
