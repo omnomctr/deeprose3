@@ -5,7 +5,7 @@
 #include <setjmp.h>
 #include "eval.h"
 
-jmp_buf on_error;
+jmp_buf on_error_jmp_buf;
 Object *on_error_error = NULL;
 
 #define EASSERT(expr, error) \
@@ -18,16 +18,45 @@ Object *on_error_error = NULL;
 
 static Object *_eval_sexpr(Object *o);
 
+static Object *_builtin_add(Object *o);
+static Object *_builtin_subtract(Object *o);
+static Object *_builtin_multiply(Object *o);
+static Object *_builtin_divide(Object *o);
+static Object *_builtin_exit(Object *o);
+static Object *_builtin_cons(Object *o);
+static Object *_builtin_eval(Object *o);
+static Object *_builtin_first(Object *o);
+static Object *_builtin_rest(Object *o);
+
+typedef struct { const char *name; Builtin func; } builtin_record;
+builtin_record builtins[] = {
+    { "+", _builtin_add },
+    { "-", _builtin_subtract },
+    { "*", _builtin_multiply },
+    { "/", _builtin_divide },
+    { "exit", _builtin_exit },
+    { "cons", _builtin_cons },
+    { "eval", _builtin_eval },
+    { "first", _builtin_first },
+    { "rest", _builtin_rest },
+};
+
+
 Object *eval_expr(Object *o)
 {
     if (!o->eval) return o;
     switch (o->kind) {
-        case O_STR: case O_NUM: case O_NIL: case O_ERROR:
+        case O_STR: case O_NUM: case O_NIL: case O_ERROR: case O_BUILTIN:
             return o;
 
         case O_IDENT:
-            /* TODO */
-            return object_error_new("identifier lookup feature not implemented :)");
+            for (size_t i = 0; i < sizeof(builtins) / sizeof(builtin_record); i++) {
+                if (o->str.len == strlen(builtins[i].name) && memcmp(o->str.ptr, builtins[i].name, o->str.len) == 0) {
+                    return object_builtin_new(builtins[i].func);
+                }
+            }
+
+            return object_error_new("identifier not found");
 
         case O_LIST:
             return _eval_sexpr(o);
@@ -38,7 +67,7 @@ Object *eval_expr(Object *o)
 
 Object *eval(Object *o)
 {
-    if (setjmp(on_error) != 0)
+    if (setjmp(on_error_jmp_buf) != 0)
         return on_error_error;
 
     return eval_expr(o);
@@ -49,7 +78,7 @@ _Noreturn void report_error(Object *o)
 {
     assert(o->kind == O_ERROR);
     on_error_error = o;
-    longjmp(on_error, 1);
+    longjmp(on_error_jmp_buf, 1);
 }
 
 static Object *_builtin_add(Object *o)
@@ -165,19 +194,6 @@ static Object *_builtin_rest(Object *o)
 
     return arg1->list.cdr;
 }
-typedef Object *(*builtin)(Object*);
-typedef struct { const char *name; builtin func; } builtin_record;
-builtin_record builtins[] = {
-    { "+", _builtin_add },
-    { "-", _builtin_subtract },
-    { "*", _builtin_multiply },
-    { "/", _builtin_divide },
-    { "exit", _builtin_exit },
-    { "cons", _builtin_cons },
-    { "eval", _builtin_eval },
-    { "first", _builtin_first },
-    { "rest", _builtin_rest },
-};
 
 static Object *_eval_sexpr(Object *o)
 {
@@ -188,11 +204,5 @@ static Object *_eval_sexpr(Object *o)
     EASSERT(o->list.car->kind == O_IDENT, "first element in list must be an identifier");
     EASSERT(o->list.cdr->kind == O_LIST || o->list.cdr->kind == O_NIL, "invalid function call (did you try to run a pair (f . x) ?");
 
-    for (size_t i = 0; i < sizeof(builtins) / sizeof(builtin_record); i++) {
-        if (o->list.car->str.len == strlen(builtins[i].name) && memcmp(o->list.car->str.ptr, builtins[i].name, o->list.car->str.len) == 0) {
-            return builtins[i].func(o->list.cdr);
-        }
-    }
-
-    return object_error_new("function not found");
+   return eval_expr(o->list.car)->builtin(o->list.cdr);  
 }

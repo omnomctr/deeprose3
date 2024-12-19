@@ -26,8 +26,10 @@ struct List {
 #define OBJECT_ERROR_STR_MAX_SIZE 1024
 
 enum ObjectKind {
-    O_STR, O_NUM, O_LIST, O_IDENT, O_NIL, O_ERROR,
+    O_STR, O_NUM, O_LIST, O_IDENT, O_NIL, O_ERROR, O_BUILTIN,
 };
+
+typedef Object *(*Builtin)(Object*);
 
 struct Object {
     Object *obj_next; /* nullable - for garbage collector */
@@ -39,6 +41,7 @@ struct Object {
         struct StringSlice str;
         int32_t num;
         struct List list;
+        Builtin builtin;
    };
 };
 
@@ -47,6 +50,7 @@ Object *object_list_new(Object *car, Object *cdr);
 Object *object_string_slice_new(const char *s, size_t len);
 Object *object_num_new(int32_t num);
 Object *object_nil_new(void);
+Object *object_builtin_new(Builtin f);
 const char *object_type_as_string(enum ObjectKind k);
 Object *object_error_new(const char *fmt, ...);
 void object_print(Object *o);

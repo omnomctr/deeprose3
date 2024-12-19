@@ -26,6 +26,7 @@ const char * const object_type_string[] = {
    [O_IDENT] = "identifier", 
    [O_NIL] = "nil", 
    [O_ERROR] = "error",
+   [O_BUILTIN] = "builtin",
 };
 
 const char *object_type_as_string(enum ObjectKind k)
@@ -71,6 +72,14 @@ Object *object_list_new(Object *car, Object *cdr)
         .cdr = cdr,
     };
 
+    return ret;
+}
+
+Object *object_builtin_new(Builtin f)
+{
+    Object *ret = object_new_generic();
+    ret->kind = O_BUILTIN;
+    ret->builtin = f;
     return ret;
 }
 
@@ -161,6 +170,9 @@ void object_print(Object *o)
         case O_ERROR:
             printf("ERROR: ");
             _print_slice(o->str);
+            break;
+        case O_BUILTIN:
+            printf("builtin (%p)", o->builtin);
             break;
     }
 }
