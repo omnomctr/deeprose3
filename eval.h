@@ -4,5 +4,5 @@
 #include "object.h"
 
 Object *eval(Object *o);
-
+_Noreturn void report_error(Object *o);
 #endif

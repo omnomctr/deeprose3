@@ -4,6 +4,8 @@
 #include "object.h"
 #include "util.h"
 #include <sys/param.h>
+#include <stdarg.h>
+#include "eval.h"
 
 static struct {
     size_t live_objects;
@@ -17,6 +19,19 @@ static struct {
     .obj_list = NULL,
 };
 
+const char * const object_type_string[] = {
+   [O_STR] = "string", 
+   [O_NUM] = "number", 
+   [O_LIST] = "list", 
+   [O_IDENT] = "identifier", 
+   [O_NIL] = "nil", 
+   [O_ERROR] = "error",
+};
+
+const char *object_type_as_string(enum ObjectKind k)
+{
+    return object_type_string[k];
+}
 
 Object *object_new_generic(void) 
 {
@@ -76,15 +91,25 @@ Object *object_nil_new(void)
     return ret;
 }
 
-Object *object_error_new(const char *s)
+Object *object_error_new(const char *fmt, ...)
 {
     Object *ret = object_new_generic();
     ret->kind = O_ERROR;
-    ret->str.len = strlen(s);
-    ret->str.capacity = ret->str.len;
-    ret->str.ptr = malloc(sizeof(char) * ret->str.capacity);
+
+    va_list va;
+    va_start(va, fmt);
+    ret->str.capacity = OBJECT_ERROR_STR_MAX_SIZE;
+    ret->str.ptr = malloc(sizeof(char) * OBJECT_ERROR_STR_MAX_SIZE);
     CHECK_ALLOC(ret->str.ptr);
-    memcpy(ret->str.ptr, s, ret->str.len);
+
+    vsnprintf(ret->str.ptr, OBJECT_ERROR_STR_MAX_SIZE - 1, fmt, va);
+    
+    ret->str.capacity = ret->str.len = strlen(ret->str.ptr);
+    ret->str.ptr = realloc(ret->str.ptr, ret->str.capacity); 
+    CHECK_ALLOC(ret->str.ptr);
+
+    va_end(va);
+    report_error(ret);
     return ret;
 }
 
