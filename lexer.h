@@ -18,6 +18,7 @@ typedef struct Lexer {
 enum TokenType {
     t_LPAREN,
     t_RPAREN,
+    t_QUOTE,
     t_STR,
     t_IDENT,
     t_NUM,

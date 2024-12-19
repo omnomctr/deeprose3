@@ -23,6 +23,7 @@ Object *object_new_generic(void)
     Object *ret = malloc(sizeof(Object));
     CHECK_ALLOC(ret);
     DBG("creating object at %p", ret);
+    ret->eval = true;
     ret->gc_mark = NOT_MARKED;
     ret->obj_next = GC.obj_list;
     GC.obj_list = ret;
@@ -62,6 +63,8 @@ Object *object_num_new(int32_t num)
 {
     Object *ret = object_new_generic();
     ret->kind = O_NUM;
+    ret->list.car = NULL;
+    ret->list.cdr = NULL;
     ret->num = num;
     return ret;
 }
@@ -73,49 +76,67 @@ Object *object_nil_new(void)
     return ret;
 }
 
+Object *object_error_new(const char *s)
+{
+    Object *ret = object_new_generic();
+    ret->kind = O_ERROR;
+    ret->str.len = strlen(s);
+    ret->str.capacity = ret->str.len;
+    ret->str.ptr = malloc(sizeof(char) * ret->str.capacity);
+    CHECK_ALLOC(ret->str.ptr);
+    memcpy(ret->str.ptr, s, ret->str.len);
+    return ret;
+}
+
 void object_free(Object *o)
 {
     DBG("freeing object at %p", o);
-    if (o->kind == O_STR || o->kind == O_IDENT) 
+    if (o->kind == O_STR || o->kind == O_IDENT || o->kind == O_ERROR) 
         free(o->str.ptr);
     free(o);
 }
 
+inline static void _print_slice(struct StringSlice str)
+{
+    for (size_t i = 0; i < str.len; i++)
+        putchar(str.ptr[i]);
+}
+
 void object_print(Object *o)
 {
-    if (o == NULL) 
-        printf("[null object]");
-    else { 
-        switch (o->kind) {
-            case O_STR:
-                printf("[string object: \"");
-                for (size_t i = 0; i < o->str.len; i++)
-                    putchar(o->str.ptr[i]);
-                printf("\"]");
-                break;
-            case O_NUM:
-                printf("[number object: %d]", o->num);
-                break;
-            case O_IDENT:
-                printf("[identifier object: \"");
-                for (size_t i = 0; i < o->str.len; i++)
-                    putchar(o->str.ptr[i]);
-                printf("\"]");
-                break;
-            case O_LIST:
-                printf("("); 
-                Object *cursor = o;
-                for (;;) {
-                    object_print(cursor->list.car);
-                    cursor = cursor->list.cdr;
-                    if (cursor->kind != O_LIST) break;
-                    else putchar(' ');
-                }
-                printf(")");
-                break;
-            case O_NIL:
-                printf("[nil object]");
-        }
+    assert(o);
+    switch (o->kind) {
+        case O_STR:
+            putchar('"');
+            _print_slice(o->str);
+            putchar('"');
+            break;
+        case O_NUM:
+            printf("%d", o->num);
+            break;
+        case O_IDENT:
+            _print_slice(o->str);
+            break;
+        case O_LIST:
+            printf("("); 
+            Object *cursor = o;
+            for (;;) {
+                object_print(cursor->list.car);
+                cursor = cursor->list.cdr;
+                if (cursor->kind == O_NIL) break;
+                else if (cursor->kind == O_LIST) putchar(' ');
+                /* this is for pairs similar to scheme (a . b) */
+                else { printf(" . "); object_print(cursor); break; }
+            }
+            printf(")");
+            break;
+        case O_NIL:
+            printf("nil");
+            break;
+        case O_ERROR:
+            printf("ERROR: ");
+            _print_slice(o->str);
+            break;
     }
 }
 

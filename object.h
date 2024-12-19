@@ -24,7 +24,7 @@ struct List {
 };
 
 enum ObjectKind {
-    O_STR, O_NUM, O_LIST, O_IDENT, O_NIL,
+    O_STR, O_NUM, O_LIST, O_IDENT, O_NIL, O_ERROR,
 };
 
 struct Object {
@@ -32,6 +32,7 @@ struct Object {
     Mark gc_mark;
     
     enum ObjectKind kind;
+    bool eval;
     union {
         struct StringSlice str;
         int32_t num;
@@ -44,6 +45,7 @@ Object *object_list_new(Object *car, Object *cdr);
 Object *object_string_slice_new(const char *s, size_t len);
 Object *object_num_new(int32_t num);
 Object *object_nil_new(void);
+Object *object_error_new(const char *s);
 void object_print(Object *o);
 void object_free(Object *o);
 

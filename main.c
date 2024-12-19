@@ -6,6 +6,7 @@
 #include "arena.h"
 #include "object.h"
 #include "parser.h"
+#include "eval.h"
 
 /* return malloc'ed string of line until newline */
 char *get_line(FILE *);
@@ -30,7 +31,8 @@ int main(int argc, char *argv[])
         for (;;) {
             if (parser->error) { printf("parser has error \"%s\"", parser_error_string(parser)); }
             else if (o == NULL) break;
-            else object_print(o);
+            else object_print(eval(o)); 
+
             putchar('\n');
 
             if (parser_at_eof(parser)) break;
@@ -38,7 +40,6 @@ int main(int argc, char *argv[])
         }
 
         GC_collect_garbage();
-        
 
         arena_clear(lexer_arena);
         free(line);
@@ -58,7 +59,7 @@ char *get_line(FILE *f)
     int ch;
     while ((ch = fgetc(f)) != '\n') {
         /* C-D quits if its on a new line (standard unix behaviour) */ 
-        if (ch == EOF && str.len == 0) { putchar('\n'); exit(0); }
+        if (ch == EOF && str.len == 0) { putchar('\n'); free(str.ptr); exit(0); }
         /* the plus one is for the null character at the end */
         if (str.len + 1 >= str.capacity) {
             str.capacity *= 2;

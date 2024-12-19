@@ -32,12 +32,19 @@ inline static void _parser_next_token(Parser *p)
 
 static Object *_parser_parse_expr(Parser *p)
 {
-    Object *ret;
+    Object *ret = NULL;
     Token *current_token = p->cursor->token;
     switch (current_token->type) {
         case t_LPAREN: {
             ret = _parse_list(p); 
         } break;
+        case t_QUOTE: {
+            _parser_next_token(p);
+            if (p->error) break;
+            ret = _parser_parse_expr(p);
+            if (p->error) { ret = NULL; break; }
+            ret->eval = false;
+        } break; 
         case t_STR: {
             ret = object_string_slice_new(current_token->string_slice.ptr, current_token->string_slice.len);
         } break;

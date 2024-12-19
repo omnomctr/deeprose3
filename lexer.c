@@ -42,6 +42,7 @@ Token *lexer_next_token(Lexer *l)
     Token *tok;
     switch (l->ch) {
         case '\0': tok = _token_new(l, t_EOF); break;
+        case '\'': tok = _token_new(l, t_QUOTE); break;
         case '(': tok = _token_new(l, t_LPAREN); break;
         case ')': tok = _token_new(l, t_RPAREN); break;
         case '"': tok = _read_string(l); break;
@@ -76,6 +77,7 @@ void token_print(Token *t)
     switch (t->type) {
         case t_LPAREN: printf("{left parenthese}"); break;
         case t_RPAREN: printf("{right parenthese}"); break;
+        case t_QUOTE: printf("{quote}"); break;
         case t_EOF: printf("{end of file}"); break;
         case t_STR: 
             printf("{string \""); 
