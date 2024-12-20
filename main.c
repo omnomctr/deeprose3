@@ -14,6 +14,9 @@ char *get_line(FILE *);
 int main(int argc, char *argv[])
 {
     Arena *lexer_arena = arena_new(0);
+    Env *env = env_new(NULL);
+    env_add_default_builtin_functions(env);
+
     for (;;) {
         printf("=> "); fflush(stdout);
         char* line = get_line(stdin);
@@ -26,12 +29,12 @@ int main(int argc, char *argv[])
 
         Lexer *lex = lexer_new(line, lexer_arena);
         Parser *parser = parser_new(lex);
-
+        
         Object *o = parser_parse(parser);
         for (;;) {
             if (parser->error) { printf("parser has error \"%s\"", parser_error_string(parser)); }
             else if (o == NULL) break;
-            else object_print(eval(o)); 
+            else object_print(eval(env, o)); 
 
             putchar('\n');
 
@@ -39,12 +42,14 @@ int main(int argc, char *argv[])
             o = parser_parse(parser);
         }
 
-        GC_collect_garbage();
+        GC_collect_garbage(env);
 
         arena_clear(lexer_arena);
         free(line);
     }
 
+    env_free(env); 
+    GC_collect_garbage(NULL);
     arena_destroy(lexer_arena); 
     return 0;
 }

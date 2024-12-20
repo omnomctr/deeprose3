@@ -17,17 +17,19 @@ Object *on_error_error = NULL;
           if ((obj)->kind == O_ERROR) return o; \
           else return object_error_new(f_name ": expected %s, got %s", object_type_as_string(expected_type), object_type_as_string((obj)->kind)); } } while(0);
 
-static Object *_eval_sexpr(Object *o);
+static Object *_eval_sexpr(Env *e, Object *o);
 
-static Object *_builtin_add(Object *o);
-static Object *_builtin_subtract(Object *o);
-static Object *_builtin_multiply(Object *o);
-static Object *_builtin_divide(Object *o);
-static Object *_builtin_exit(Object *o);
-static Object *_builtin_cons(Object *o);
-static Object *_builtin_eval(Object *o);
-static Object *_builtin_first(Object *o);
-static Object *_builtin_rest(Object *o);
+static Object *_builtin_add(Env *e, Object *o);
+static Object *_builtin_subtract(Env *e, Object *o);
+static Object *_builtin_multiply(Env *e, Object *o);
+static Object *_builtin_divide(Env *e, Object *o);
+static Object *_builtin_exit(Env *e, Object *o);
+static Object *_builtin_cons(Env *e, Object *o);
+static Object *_builtin_eval(Env *e, Object *o);
+static Object *_builtin_first(Env *e, Object *o);
+static Object *_builtin_rest(Env *e, Object *o);
+static Object *_builtin_def(Env *e, Object *o);
+static Object *_builtin_print_gc_status(Env *e, Object *o);
 
 typedef struct { const char *name; Builtin func; } builtin_record;
 builtin_record builtins[] = {
@@ -40,10 +42,19 @@ builtin_record builtins[] = {
     { "eval", _builtin_eval },
     { "first", _builtin_first },
     { "rest", _builtin_rest },
+    { "def", _builtin_def }, 
+    { "gc-status", _builtin_print_gc_status }, 
 };
 
+void env_add_default_builtin_functions(Env *e) 
+{
+    for (size_t i = 0; i < sizeof(builtins) / sizeof(builtin_record); i++) {
+        env_put(e, object_ident_new(builtins[i].name, strlen(builtins[i].name)),
+                    object_builtin_new(builtins[i].func));
+    }
+}
 
-Object *eval_expr(Object *o)
+Object *eval_expr(Env *e, Object *o)
 {
     if (!o->eval) return o;
     switch (o->kind) {
@@ -51,27 +62,21 @@ Object *eval_expr(Object *o)
             return o;
 
         case O_IDENT:
-            for (size_t i = 0; i < sizeof(builtins) / sizeof(builtin_record); i++) {
-                if (o->str.len == strlen(builtins[i].name) && memcmp(o->str.ptr, builtins[i].name, o->str.len) == 0) {
-                    return object_builtin_new(builtins[i].func);
-                }
-            }
-
-            return object_error_new("identifier not found");
+            return env_get(e, o);
 
         case O_LIST:
-            return _eval_sexpr(o);
+            return _eval_sexpr(e, o);
     }
 
     assert(0 && "infallible");
 }
 
-Object *eval(Object *o)
+Object *eval(Env *e, Object *o)
 {
     if (setjmp(on_error_jmp_buf) != 0)
         return on_error_error;
 
-    return eval_expr(o);
+    return eval_expr(e, o);
 
 }
 
@@ -82,12 +87,12 @@ _Noreturn void report_error(Object *o)
     longjmp(on_error_jmp_buf, 1);
 }
 
-static Object *_builtin_add(Object *o)
+static Object *_builtin_add(Env *e, Object *o)
 {
     EASSERT(o->kind == O_LIST, "+ requires arguments");
     int32_t num = 0;
     while (o->kind == O_LIST) {
-        Object *to_add = eval_expr(o->list.car);
+        Object *to_add = eval_expr(e, o->list.car);
         EASSERT_TYPE("+", to_add, O_NUM);
         num += to_add->num;
         o = o->list.cdr;
@@ -95,10 +100,10 @@ static Object *_builtin_add(Object *o)
     return object_num_new(num);
 }
 
-static Object *_builtin_subtract(Object *o)
+static Object *_builtin_subtract(Env *e, Object *o)
 {
     EASSERT(o->kind == O_LIST, "- requires arguments");
-    Object *lhs_object = eval_expr(o->list.car);
+    Object *lhs_object = eval_expr(e, o->list.car);
     EASSERT_TYPE("-", lhs_object, O_NUM);
     int32_t lhs = lhs_object->num;
     o = o->list.cdr;
@@ -106,7 +111,7 @@ static Object *_builtin_subtract(Object *o)
         lhs *= -1;
 
     while (o->kind == O_LIST) {
-        Object *rhs = eval_expr(o->list.car);
+        Object *rhs = eval_expr(e, o->list.car);
         EASSERT_TYPE("-", rhs, O_NUM);
         lhs -= rhs->num;
         o = o->list.cdr;
@@ -115,13 +120,13 @@ static Object *_builtin_subtract(Object *o)
     return object_num_new(lhs);
 }
 
-static Object *_builtin_multiply(Object *o) 
+static Object *_builtin_multiply(Env *e, Object *o) 
 {
     EASSERT(o->kind == O_LIST, "* requires arguments");
     int32_t num = 1;
 
     while (o->kind == O_LIST) {
-        Object *to_mult = eval_expr(o->list.car);
+        Object *to_mult = eval_expr(e, o->list.car);
         EASSERT_TYPE("*", to_mult, O_NUM);
         num *= to_mult->num;
         o = o->list.cdr;
@@ -130,16 +135,16 @@ static Object *_builtin_multiply(Object *o)
     return object_num_new(num);
 }
 
-static Object *_builtin_divide(Object *o) 
+static Object *_builtin_divide(Env *e, Object *o) 
 {
     EASSERT(o->kind == O_LIST, "/ requires arguments");
-    Object *lhs_object = eval_expr(o->list.car);
+    Object *lhs_object = eval_expr(e, o->list.car);
     EASSERT_TYPE("/", lhs_object, O_NUM);
     int32_t lhs = lhs_object->num;
     o = o->list.cdr;
 
     while (o->kind == O_LIST) {
-        Object *rhs = eval_expr(o->list.car);
+        Object *rhs = eval_expr(e, o->list.car);
         EASSERT_TYPE("/", rhs, O_NUM);
         lhs /= rhs->num;
         o = o->list.cdr;
@@ -148,62 +153,79 @@ static Object *_builtin_divide(Object *o)
     return object_num_new(lhs);
 }
 
-static Object *_builtin_exit(Object *o)
+static Object *_builtin_exit(Env *e, Object *o)
 {
     EASSERT(o->kind == O_LIST, "exit requires arguments");
-    Object *exit_code_object = eval_expr(o->list.car);
+    Object *exit_code_object = eval_expr(e, o->list.car);
     EASSERT_TYPE("exit", exit_code_object, O_NUM);
     exit(exit_code_object->num);
 }
 
-static Object *_builtin_cons(Object *o)
+static Object *_builtin_cons(Env *e, Object *o)
 {
     EASSERT(o->kind == O_LIST, "cons needs two arguments");
-    Object *car = eval_expr(o->list.car);
+    Object *car = eval_expr(e, o->list.car);
     Object *next = o->list.cdr; 
     EASSERT(next->kind == O_LIST, "cons needs two arguments");
-    Object *cdr = eval_expr(next->list.car);
+    Object *cdr = eval_expr(e, next->list.car);
     
     Object *ret = object_list_new(car, cdr);
     ret->eval = false;
     return ret;
 }
 
-static Object *_builtin_eval(Object *o) 
+static Object *_builtin_eval(Env *e, Object *o) 
 {
     EASSERT(o->kind == O_LIST, "eval requires an argument");
-    Object *quoted_item = eval_expr(o->list.car);
+    Object *quoted_item = eval_expr(e, o->list.car);
     EASSERT(!quoted_item->eval, "eval: already evaluated");
     quoted_item->eval = true;
-    return eval_expr(quoted_item);
+    return eval_expr(e, quoted_item);
 }
 
-static Object *_builtin_first(Object *o)
+static Object *_builtin_first(Env *e, Object *o)
 {
     EASSERT(o->kind == O_LIST, "first requires an argument");
-    Object *arg1 = eval_expr(o->list.car);
+    Object *arg1 = eval_expr(e, o->list.car);
     EASSERT_TYPE("first", arg1, O_LIST);
 
     return arg1->list.car;
 }
 
-static Object *_builtin_rest(Object *o)
+static Object *_builtin_rest(Env *e, Object *o)
 {
     EASSERT(o->kind == O_LIST, "rest requires an argument");
-    Object *arg1 = eval_expr(o->list.car);
+    Object *arg1 = eval_expr(e, o->list.car);
     EASSERT_TYPE("rest", arg1, O_LIST);
 
     return arg1->list.cdr;
 }
 
-static Object *_eval_sexpr(Object *o)
+static Object *_builtin_def(Env *e, Object *o)
+{
+    EASSERT(o->kind == O_LIST, "def requires an argument");
+    EASSERT_TYPE("def", o->list.car, O_IDENT);
+
+    Object *value = eval_expr(e, o->list.cdr->list.car);
+    env_put(e, o->list.car, value);
+    return object_nil_new();
+}
+
+static Object *_eval_sexpr(Env *e, Object *o)
 {
     assert(o->kind == O_LIST);
     EASSERT(o->list.car->kind == O_IDENT, "first element in list must be an identifier");
     EASSERT(o->list.cdr->kind == O_LIST || o->list.cdr->kind == O_NIL, "invalid function call (did you try to run a pair (f . x) ?");
  
     o->list.car->eval = true;
-    Object *f = eval(o->list.car);
+    Object *f = eval(e, o->list.car);
     assert(f->kind == O_BUILTIN);
-    return f->builtin(o->list.cdr);  
+    return f->builtin(e, o->list.cdr);  
+}
+
+
+static Object *_builtin_print_gc_status(Env *e, Object *o)
+{
+    GC_debug_print_status();
+    return object_nil_new();
 }

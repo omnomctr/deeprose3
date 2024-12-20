@@ -9,13 +9,9 @@
 
 static struct {
     size_t live_objects;
-    size_t max_objects;
-    Object *mark_sources;
     Object *obj_list;
 } GC = {
     .live_objects = 0,
-    .max_objects = INITIAL_OBJECT_GC_MAX,
-    .mark_sources = NULL,
     .obj_list = NULL,
 };
 
@@ -60,6 +56,13 @@ Object *object_string_slice_new(const char *s, size_t len)
     CHECK_ALLOC(ret->str.ptr);
     memcpy(ret->str.ptr, s, len);
 
+    return ret;
+}
+
+Object *object_ident_new(const char *s, size_t len)
+{
+    Object *ret = object_string_slice_new(s, len);
+    ret->kind = O_IDENT;
     return ret;
 }
 
@@ -177,7 +180,7 @@ void object_print(Object *o)
     }
 }
 
-static void _GC_mark(Object *o)
+static void _GC_mark_object(Object *o)
 {
     if (o == NULL) {
         DBG("_GC_mark tried to mark a null object");
@@ -187,8 +190,8 @@ static void _GC_mark(Object *o)
     o->gc_mark = MARKED;
 
     if (o->kind == O_LIST) {
-        _GC_mark(o->list.car);
-        _GC_mark(o->list.cdr);
+        _GC_mark_object(o->list.car);
+        _GC_mark_object(o->list.cdr);
     }
 }
 
@@ -213,24 +216,28 @@ static void _GC_sweep(void)
     }
 }
 
-void GC_collect_garbage(void)
+static void _GC_mark_env(Env *e) 
 {
-    _GC_mark(GC.mark_sources);
+    EnvValueStore *cursor = e->store;
+    while (cursor != NULL) {
+        _GC_mark_object(cursor->ident);
+        _GC_mark_object(cursor->value);
+        cursor = cursor->next;
+    }
+
+    if (e->parent) _GC_mark_env(e->parent);
+}
+
+void GC_collect_garbage(Env *e)
+{
+    if (e) _GC_mark_env(e);
     _GC_sweep();
-    GC.max_objects = GC.live_objects == 0 ? INITIAL_OBJECT_GC_MAX : MAX(GC.live_objects * 2, INITIAL_OBJECT_GC_MAX);
 }
 
 void GC_debug_print_status(void)
 {
     fprintf(stderr, "GC status:\n"
-            "\tlive objects: %zu\n"
-            "\tmax objects: %zu\n",
-           GC.live_objects, GC.max_objects);
+            "\tlive objects: %zu\n",
+            GC.live_objects);
 }
 
-int GC_add_mark_source(Object *mark_source)
-{
-    if (GC.mark_sources != NULL) return -1;
-    else GC.mark_sources = mark_source;
-    return 0;
-}

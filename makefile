@@ -1,5 +1,5 @@
 BUILDDIR = ./.build
-CFLAGS = -Wall -ggdb
+CFLAGS = -Wall
 CC = gcc
 
 all: $(BUILDDIR)/deeprose
@@ -14,7 +14,7 @@ $(BUILDDIR)/%.o: %.c %.h
 	mv *.o $(BUILDDIR)/
 	mv *.h.gch $(BUILDDIR)/
 
-$(BUILDDIR)/deeprose: $(BUILDDIR)/lexer.o $(BUILDDIR)/arena.o $(BUILDDIR)/object.o $(BUILDDIR)/parser.o $(BUILDDIR)/eval.o main.c
+$(BUILDDIR)/deeprose: $(BUILDDIR)/lexer.o $(BUILDDIR)/arena.o $(BUILDDIR)/object.o $(BUILDDIR)/parser.o $(BUILDDIR)/eval.o $(BUILDDIR)/environment.o main.c
 	@mkdir -p $(BUILDDIR)
 	$(CC) $(CFLAGS) -o $@ $^
 
