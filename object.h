@@ -69,6 +69,7 @@ Object *object_nil_new(void);
 Object *object_builtin_new(Builtin f);
 const char *object_type_as_string(enum ObjectKind k);
 Object *object_error_new(const char *fmt, ...);
+Object *object_error_new_from_string_slice(Object *o);
 void object_print(Object *o);
 void object_free(Object *o);
 

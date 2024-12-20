@@ -125,6 +125,20 @@ Object *object_error_new(const char *fmt, ...)
     return ret;
 }
 
+Object *object_error_new_from_string_slice(Object *o)
+{
+    assert(o->kind == O_STR);
+    Object *ret = object_new_generic();
+    ret->kind = O_ERROR;
+    ret->str.capacity = ret->str.len = o->str.len;
+    ret->str.ptr = malloc(sizeof(char) * ret->str.capacity);
+    CHECK_ALLOC(ret->str.ptr);
+    memcpy(ret->str.ptr, o->str.ptr, ret->str.len);
+
+    report_error(ret);
+    return ret;
+}
+
 void object_free(Object *o)
 {
     DBG("freeing object at %p", o);

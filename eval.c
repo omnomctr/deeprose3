@@ -30,6 +30,7 @@ static Object *_builtin_first(Env *e, Object *o);
 static Object *_builtin_rest(Env *e, Object *o);
 static Object *_builtin_def(Env *e, Object *o);
 static Object *_builtin_print_gc_status(Env *e, Object *o);
+static Object *_builtin_error(Env *e, Object *o);
 
 typedef struct { const char *name; Builtin func; } builtin_record;
 builtin_record builtins[] = {
@@ -44,14 +45,17 @@ builtin_record builtins[] = {
     { "rest", _builtin_rest },
     { "def", _builtin_def }, 
     { "gc-status", _builtin_print_gc_status }, 
+    { "error", _builtin_error },
 };
 
-void env_add_default_builtin_functions(Env *e) 
+void env_add_default_variables(Env *e) 
 {
     for (size_t i = 0; i < sizeof(builtins) / sizeof(builtin_record); i++) {
         env_put(e, object_ident_new(builtins[i].name, strlen(builtins[i].name)),
                     object_builtin_new(builtins[i].func));
     }
+    char nil_ident[] = "nil";
+    env_put(e, object_ident_new(nil_ident, strlen(nil_ident)), object_nil_new());
 }
 
 Object *eval_expr(Env *e, Object *o)
@@ -73,8 +77,8 @@ Object *eval_expr(Env *e, Object *o)
 
 Object *eval(Env *e, Object *o)
 {
-    if (setjmp(on_error_jmp_buf) != 0)
-        return on_error_error;
+    if (setjmp(on_error_jmp_buf) != 0) {
+        return on_error_error;}
 
     return eval_expr(e, o);
 
@@ -218,7 +222,7 @@ static Object *_eval_sexpr(Env *e, Object *o)
     EASSERT(o->list.cdr->kind == O_LIST || o->list.cdr->kind == O_NIL, "invalid function call (did you try to run a pair (f . x) ?");
  
     o->list.car->eval = true;
-    Object *f = eval(e, o->list.car);
+    Object *f = eval_expr(e, o->list.car);
     assert(f->kind == O_BUILTIN);
     return f->builtin(e, o->list.cdr);  
 }
@@ -228,4 +232,12 @@ static Object *_builtin_print_gc_status(Env *e, Object *o)
 {
     GC_debug_print_status();
     return object_nil_new();
+}
+
+static Object *_builtin_error(Env *e, Object *o)
+{
+    EASSERT(o->kind == O_LIST, "error requires an argument");
+    Object *error = eval_expr(e, o->list.car);
+    EASSERT_TYPE("error", error, O_STR);
+    return object_error_new_from_string_slice(error);
 }

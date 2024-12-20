@@ -15,7 +15,7 @@ int main(int argc, char *argv[])
 {
     Arena *lexer_arena = arena_new(0);
     Env *env = env_new(NULL);
-    env_add_default_builtin_functions(env);
+    env_add_default_variables(env);
 
     for (;;) {
         printf("=> "); fflush(stdout);
