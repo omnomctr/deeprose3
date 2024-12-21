@@ -1,12 +1,12 @@
 BUILDDIR = ./.build
-CFLAGS = -Wall
+CFLAGS = -Wall -ggdb
 CC = gcc
 
 all: $(BUILDDIR)/deeprose
 
 run:
 	@make all
-	rlwrap $(BUILDDIR)/deeprose
+	rlwrap $(BUILDDIR)/deeprose -repl
 
 $(BUILDDIR)/%.o: %.c %.h
 	@mkdir -p $(BUILDDIR)
@@ -14,7 +14,10 @@ $(BUILDDIR)/%.o: %.c %.h
 	mv *.o $(BUILDDIR)/
 	mv *.h.gch $(BUILDDIR)/
 
-$(BUILDDIR)/deeprose: $(BUILDDIR)/lexer.o $(BUILDDIR)/arena.o $(BUILDDIR)/object.o $(BUILDDIR)/parser.o $(BUILDDIR)/eval.o $(BUILDDIR)/environment.o main.c
+$(BUILDDIR)/stdlib.h: programs/stdlib.deeprose
+	python3 create_stdlib_header.py $(BUILDDIR)
+
+$(BUILDDIR)/deeprose: $(BUILDDIR)/lexer.o $(BUILDDIR)/arena.o $(BUILDDIR)/object.o $(BUILDDIR)/parser.o $(BUILDDIR)/eval.o $(BUILDDIR)/environment.o $(BUILDDIR)/stdlib.h main.c
 	@mkdir -p $(BUILDDIR)
 	$(CC) $(CFLAGS) -o $@ $^
 

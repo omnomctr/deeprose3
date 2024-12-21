@@ -109,6 +109,9 @@ Object *object_error_new(const char *fmt, ...)
     Object *ret = object_new_generic();
     ret->kind = O_ERROR;
 
+    /* TODO: make a custon vsnprintf function that supports string slices
+     * & growable strings on the heap */
+
     va_list va;
     va_start(va, fmt);
     ret->str.capacity = OBJECT_ERROR_STR_MAX_SIZE;
@@ -265,9 +268,17 @@ static void _GC_mark_env(Env *e)
     if (e->parent) _GC_mark_env(e->parent);
 }
 
-void GC_collect_garbage(Env *e)
+void _GC_collect_garbage(Env *e, ...)
 {
     if (e) _GC_mark_env(e);
+
+    va_list ap;
+    va_start(ap, e);
+    Object *to_mark;
+    while ((to_mark = va_arg(ap, Object*)) != NULL)
+        _GC_mark_object(to_mark);
+
+    va_end(ap);
     _GC_sweep();
 }
 

@@ -80,7 +80,9 @@ Object *object_function_new(Env *e, Object *args, Object *body);
 void object_print(Object *o);
 void object_free(Object *o);
 
-void GC_collect_garbage(Env *e);
+#define GC_collect_garbage(env, ...) \
+    _GC_collect_garbage(env __VA_OPT__(,) __VA_ARGS__, NULL);
+void _GC_collect_garbage(Env *e, ...);
 void GC_debug_print_status(void);
 
 #endif

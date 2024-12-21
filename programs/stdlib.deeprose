@@ -1,0 +1,25 @@
+(def dec (\ (n) (- n 1)))
+
+(def inc (\ (n) (+ 1 n)))
+
+(def range (\ (start end)
+    (if (= start end)
+        (list start)
+        (cons start 
+              (range (inc start) end)))))
+
+(def map (\ (f xs)
+    (if (= nil xs)
+        nil
+        (cons (f (first xs))
+              (map f (rest xs))))))
+
+(def filter (\ (pred? xs)
+    (if (= nil xs)
+        nil
+        (if (pred? (first xs))
+            (cons (first xs)
+                  (filter pred? (rest xs)))
+            (filter pred? (rest xs))))))
+
+(def even? (\ (n) (= (mod n 2) 0)))

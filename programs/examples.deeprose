@@ -1,0 +1,20 @@
+; factorial
+(def fact (\ (n)
+    (if (= n 0)
+        1
+        (* n (fact (dec n))))))
+
+(println (fact 6)) ;=> 720
+
+; fibonacci sequence
+(def fib (\ (prev current n)
+    (if (= n 1)
+        (list current)
+        (cons current
+              (fib current (+ prev current) (dec n))))))
+
+(println (fib 0 1 6)) ;=> (1 1 2 3 5 8)
+
+; maps and filters
+(println (filter even? (range 0 10))) ;=> (0 2 4 6 8 10)
+(println (map inc '(1 2 3))) ;=> (2 3 4)

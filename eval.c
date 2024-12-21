@@ -32,6 +32,12 @@ static Object *_builtin_def(Env *e, Object *o);
 static Object *_builtin_print_gc_status(Env *e, Object *o);
 static Object *_builtin_error(Env *e, Object *o);
 static Object *_builtin_lambda(Env *e, Object *o);
+static Object *_builtin_if(Env *e, Object *o);
+static Object *_builtin_equals(Env *e, Object *o);
+static Object *_builtin_print(Env *e, Object *o);
+static Object *_builtin_println(Env *e, Object *o);
+static Object *_builtin_list(Env *e, Object *o);
+static Object *_builtin_mod(Env *e, Object *o);
 
 typedef struct { const char *name; Builtin func; } builtin_record;
 builtin_record builtins[] = {
@@ -48,6 +54,12 @@ builtin_record builtins[] = {
     { "gc-status", _builtin_print_gc_status }, 
     { "error", _builtin_error },
     { "\\", _builtin_lambda },
+    { "if", _builtin_if },
+    { "=", _builtin_equals },
+    { "print", _builtin_print },
+    { "println", _builtin_println },
+    { "list", _builtin_list },
+    { "mod", _builtin_mod },
 };
 
 void env_add_default_variables(Env *e) 
@@ -228,9 +240,8 @@ static Object *_eval_sexpr(Env *e, Object *o)
 
     if (f->kind == O_BUILTIN) return f->builtin(e, o->list.cdr);
     else {
-        if (f->kind != O_FUNCTION) {
-            printf("got: %s, expected function\n", object_type_as_string(f->kind));
-        }
+        assert(f->kind == O_FUNCTION);
+        Env *env = env_new(f->function.env);
 
         {
             Object *cursor = f->function.arguments;
@@ -240,18 +251,37 @@ static Object *_eval_sexpr(Env *e, Object *o)
                     return object_error_new("function passed too few values");
                 }
                 EASSERT(args_cursor->kind == O_LIST, "invalid function call form");
-                env_put(f->function.env, cursor->list.car, eval_expr(e, args_cursor->list.car));
+                env_put(env, cursor->list.car, eval_expr(e, args_cursor->list.car));
                 
                 cursor = cursor->list.cdr;
                 args_cursor = args_cursor->list.cdr;
             }
-
+#if 0
+            /* TODO function expressions dont work with this but 
+             * then we cant catch too many arguments being passed
+             * to a function */
             if (args_cursor->kind != O_NIL) {
                 return object_error_new("function passed too many values");
             }
+#endif
         }
 
-        return eval_expr(f->function.env, f->function.body);
+        Object *res = eval_expr(env, f->function.body);
+        env_free(env);
+#if 0
+        /* TODO: figure out why enabling the gc leads to a segfault when running this program:
+         * (def fib (\ (prev current n)
+         *      (if (= n 1)
+         *          (cons current nil)
+         *          (cons current (fib current (+ prev current) (dec n))))))
+         */
+
+(println (fib 0 1 20))
+
+
+        GC_collect_garbage(env, res);
+#endif
+        return res;
     }
 }
 
@@ -273,9 +303,10 @@ static Object *_builtin_lambda(Env *e, Object *o)
 {
     EASSERT(o->kind == O_LIST, "\\ needs arguments");
     Object *arguments = o->list.car;
-    EASSERT_TYPE("\\", arguments, O_LIST);
+    if (arguments->kind != O_LIST && arguments->kind != O_NIL) 
+        return object_error_new("\\: expected list, got %s", object_type_as_string(arguments->kind));
 
-    {
+    if (arguments->kind == O_LIST) {
         /* make sure all the arguments are identifiers */
         Object *cursor = arguments;
         while (cursor->kind != O_NIL) {
@@ -293,4 +324,109 @@ static Object *_builtin_lambda(Env *e, Object *o)
     Env *f_env = env_new(e);
 
     return object_function_new(f_env, arguments, body);
+}
+
+static Object *_builtin_if(Env *e, Object *o)
+{
+    EASSERT(o->kind = O_LIST, "if requires 3 arguments");
+    Object *expr = eval_expr(e, o->list.car);
+    EASSERT(o->list.cdr->kind == O_LIST, "if requires 3 arguments");
+    Object *if_true = o->list.cdr->list.car;
+    EASSERT(o->list.cdr->list.cdr->kind == O_LIST, "if requires 3 arguments");
+    Object *if_false = o->list.cdr->list.cdr->list.car;
+
+    if (expr->kind == O_NIL) /* falsey value */ {
+        return eval_expr(e, if_false);
+    } else {
+        return eval_expr(e, if_true);
+    }
+}
+
+static Object *_builtin_equals(Env *e, Object *o)
+{
+    EASSERT(o->kind == O_LIST, "=: needs two arguments");
+    Object *a = eval_expr(e, o->list.car);
+    EASSERT(o->list.cdr->kind, "=: needs two arguments");
+    Object *b = eval_expr(e, o->list.cdr->list.car);
+
+    if (a->kind != b->kind) return object_nil_new();
+    else {
+        switch (a->kind) {
+            case O_NUM:
+                return a->num == b->num ? object_num_new(1) : object_nil_new();
+                break;
+
+            case O_STR: case O_IDENT: case O_ERROR:
+                return memcmp(a->str.ptr, b->str.ptr, a->str.len) == 0 ? object_num_new(1) : object_nil_new();
+                break;
+
+            case O_LIST:
+                return object_error_new("=: list comparisons arent implemented yet :)");
+                break;
+
+            case O_NIL: /* only one state so its always equal to any other nil */
+                return object_num_new(1); 
+                break;
+
+            case O_BUILTIN: case O_FUNCTION:
+                return object_error_new("=: function comparisons arent implemented :)");
+                break;
+         }
+    }
+    assert(0 && "infallible");
+}
+
+static Object *_builtin_print(Env *e, Object *o)
+{
+    EASSERT(o->kind == O_LIST, "print: needs an argument");
+    object_print(eval(e, o->list.car));
+    return object_nil_new();
+}
+
+static Object *_builtin_println(Env *e, Object *o)
+{
+    EASSERT(o->kind == O_LIST, "println: needs an argument");
+    object_print(eval(e, o->list.car));
+    putchar('\n');
+    return object_nil_new();
+}
+
+static Object *_builtin_list(Env *e, Object *o)
+{
+    if (o->kind == O_NIL) return object_nil_new();
+    else {
+        EASSERT(o->kind == O_LIST, "list: needs arguments");
+
+        Object *cursor = o;
+        Object *ret = object_new_generic();
+        Object *ret_cursor = ret;
+
+        while (cursor->kind == O_LIST) {
+            ret_cursor->kind = O_LIST;
+            ret_cursor->list.car = eval_expr(e, cursor->list.car);
+
+            cursor = cursor->list.cdr;
+            if (cursor->kind != O_LIST) {
+                ret_cursor->list.cdr = object_nil_new();
+                break;
+            } else {
+                ret_cursor->list.cdr = object_new_generic();
+                ret_cursor = ret_cursor->list.cdr;
+                ret_cursor->kind = O_LIST;
+            }
+        }
+
+        return ret;
+    }
+}
+
+static Object *_builtin_mod(Env *e, Object *o)
+{
+    EASSERT(o->kind == O_LIST, "mod: needs two arguments");
+    EASSERT(o->list.cdr->kind == O_LIST, "mod: needs two arguments");
+
+    Object *lhs = eval_expr(e, o->list.car);
+    Object *rhs = eval_expr(e, o->list.cdr->list.car);
+
+    return object_num_new(lhs->num % rhs->num);
 }
