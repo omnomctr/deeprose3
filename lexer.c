@@ -135,7 +135,7 @@ static bool _is_identifier_letter(char c)
 
 static bool _is_identifier_special_char(char c)
 {
-    char *allowed_characters = "?!<>=%^*+-/-_";
+    char *allowed_characters = "?!<>=%^*+-/-\\_";
     for (; *allowed_characters != '\0'; allowed_characters++)
         if (*allowed_characters == c) return true;
 

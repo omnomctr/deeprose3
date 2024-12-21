@@ -12,7 +12,7 @@ static struct {
     Object *obj_list;
 } GC = {
     .live_objects = 0,
-    .obj_list = NULL,
+    .obj_list= NULL,
 };
 
 const char * const object_type_string[] = {
@@ -23,6 +23,7 @@ const char * const object_type_string[] = {
    [O_NIL] = "nil", 
    [O_ERROR] = "error",
    [O_BUILTIN] = "builtin",
+   [O_FUNCTION] = "function",
 };
 
 const char *object_type_as_string(enum ObjectKind k)
@@ -139,11 +140,23 @@ Object *object_error_new_from_string_slice(Object *o)
     return ret;
 }
 
+Object *object_function_new(Env *e, Object *args, Object *body)
+{
+    Object *ret = object_new_generic();
+    ret->kind = O_FUNCTION;
+    ret->function.arguments = args;
+    ret->function.body = body;
+    ret->function.env = e;
+    return ret;
+}
+
 void object_free(Object *o)
 {
     DBG("freeing object at %p", o);
     if (o->kind == O_STR || o->kind == O_IDENT || o->kind == O_ERROR) 
         free(o->str.ptr);
+    if (o->kind == O_FUNCTION) 
+        env_free(o->function.env);
     free(o);
 }
 
@@ -189,7 +202,12 @@ void object_print(Object *o)
             _print_slice(o->str);
             break;
         case O_BUILTIN:
-            printf("builtin (%p)", o->builtin);
+            printf("builtin <%p>", o->builtin);
+            break;
+        case O_FUNCTION:
+            object_print(o->function.arguments);
+            printf(" -> ");
+            object_print(o->function.body);
             break;
     }
 }
@@ -206,6 +224,11 @@ static void _GC_mark_object(Object *o)
     if (o->kind == O_LIST) {
         _GC_mark_object(o->list.car);
         _GC_mark_object(o->list.cdr);
+    }
+
+    if (o->kind == O_FUNCTION) {
+        _GC_mark_object(o->function.arguments);
+        _GC_mark_object(o->function.body);
     }
 }
 

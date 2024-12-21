@@ -27,7 +27,7 @@ struct List {
 #define OBJECT_ERROR_STR_MAX_SIZE 1024
 
 enum ObjectKind {
-    O_STR, O_NUM, O_LIST, O_IDENT, O_NIL, O_ERROR, O_BUILTIN,
+    O_STR, O_NUM, O_LIST, O_IDENT, O_NIL, O_ERROR, O_BUILTIN, O_FUNCTION,
 };
 
 
@@ -44,6 +44,11 @@ struct Env {
     EnvValueStore *store; /* nullable */
 };
 
+struct Function {
+    Object *arguments;
+    Object *body;
+    Env *env;
+};
 
 typedef Object *(*Builtin)(Env*, Object*);
 struct Object {
@@ -57,6 +62,7 @@ struct Object {
         int32_t num;
         struct List list;
         Builtin builtin;
+        struct Function function;
    };
 };
 
@@ -70,6 +76,7 @@ Object *object_builtin_new(Builtin f);
 const char *object_type_as_string(enum ObjectKind k);
 Object *object_error_new(const char *fmt, ...);
 Object *object_error_new_from_string_slice(Object *o);
+Object *object_function_new(Env *e, Object *args, Object *body);
 void object_print(Object *o);
 void object_free(Object *o);
 

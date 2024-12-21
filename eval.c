@@ -31,6 +31,7 @@ static Object *_builtin_rest(Env *e, Object *o);
 static Object *_builtin_def(Env *e, Object *o);
 static Object *_builtin_print_gc_status(Env *e, Object *o);
 static Object *_builtin_error(Env *e, Object *o);
+static Object *_builtin_lambda(Env *e, Object *o);
 
 typedef struct { const char *name; Builtin func; } builtin_record;
 builtin_record builtins[] = {
@@ -46,6 +47,7 @@ builtin_record builtins[] = {
     { "def", _builtin_def }, 
     { "gc-status", _builtin_print_gc_status }, 
     { "error", _builtin_error },
+    { "\\", _builtin_lambda },
 };
 
 void env_add_default_variables(Env *e) 
@@ -62,7 +64,7 @@ Object *eval_expr(Env *e, Object *o)
 {
     if (!o->eval) return o;
     switch (o->kind) {
-        case O_STR: case O_NUM: case O_NIL: case O_ERROR: case O_BUILTIN:
+        case O_STR: case O_NUM: case O_NIL: case O_ERROR: case O_BUILTIN: case O_FUNCTION:
             return o;
 
         case O_IDENT:
@@ -218,15 +220,40 @@ static Object *_builtin_def(Env *e, Object *o)
 static Object *_eval_sexpr(Env *e, Object *o)
 {
     assert(o->kind == O_LIST);
-    EASSERT(o->list.car->kind == O_IDENT, "first element in list must be an identifier");
-    EASSERT(o->list.cdr->kind == O_LIST || o->list.cdr->kind == O_NIL, "invalid function call (did you try to run a pair (f . x) ?");
- 
-    o->list.car->eval = true;
-    Object *f = eval_expr(e, o->list.car);
-    assert(f->kind == O_BUILTIN);
-    return f->builtin(e, o->list.cdr);  
-}
+    EASSERT(o->list.cdr->kind == O_LIST || o->list.cdr->kind == O_NIL, "invalid function call (did you try to run a pair (f . x) ?)");
 
+
+    o->list.car->eval = true;
+    Object *f = o->list.car->kind == O_FUNCTION ? o->list.car : eval_expr(e, o->list.car);
+
+    if (f->kind == O_BUILTIN) return f->builtin(e, o->list.cdr);
+    else {
+        if (f->kind != O_FUNCTION) {
+            printf("got: %s, expected function\n", object_type_as_string(f->kind));
+        }
+
+        {
+            Object *cursor = f->function.arguments;
+            Object *args_cursor = o->list.cdr;
+            while (cursor->kind != O_NIL) {
+                if (args_cursor->kind == O_NIL) {
+                    return object_error_new("function passed too few values");
+                }
+                EASSERT(args_cursor->kind == O_LIST, "invalid function call form");
+                env_put(f->function.env, cursor->list.car, eval_expr(e, args_cursor->list.car));
+                
+                cursor = cursor->list.cdr;
+                args_cursor = args_cursor->list.cdr;
+            }
+
+            if (args_cursor->kind != O_NIL) {
+                return object_error_new("function passed too many values");
+            }
+        }
+
+        return eval_expr(f->function.env, f->function.body);
+    }
+}
 
 static Object *_builtin_print_gc_status(Env *e, Object *o)
 {
@@ -240,4 +267,30 @@ static Object *_builtin_error(Env *e, Object *o)
     Object *error = eval_expr(e, o->list.car);
     EASSERT_TYPE("error", error, O_STR);
     return object_error_new_from_string_slice(error);
+}
+
+static Object *_builtin_lambda(Env *e, Object *o)
+{
+    EASSERT(o->kind == O_LIST, "\\ needs arguments");
+    Object *arguments = o->list.car;
+    EASSERT_TYPE("\\", arguments, O_LIST);
+
+    {
+        /* make sure all the arguments are identifiers */
+        Object *cursor = arguments;
+        while (cursor->kind != O_NIL) {
+            EASSERT_TYPE("\\", cursor, O_LIST);
+            EASSERT_TYPE("\\", cursor->list.car, O_IDENT);
+            EASSERT(cursor->list.car->eval, "\\: all arguments must be evaluated (did you add a quote somewhere?)");
+            cursor = cursor->list.cdr;
+        }
+    }
+
+    EASSERT(o->list.cdr->kind == O_LIST, "\\ needs two arguments");
+    Object *body = o->list.cdr->list.car;
+    EASSERT_TYPE("\\", body, O_LIST);
+
+    Env *f_env = env_new(e);
+
+    return object_function_new(f_env, arguments, body);
 }
