@@ -5,6 +5,9 @@
 #include <setjmp.h>
 #include <stdio.h>
 #include "eval.h"
+#include "lexer.h"
+#include "parser.h"
+#include "util.h"
 
 jmp_buf on_error_jmp_buf;
 Object *on_error_error = NULL;
@@ -43,7 +46,48 @@ static Object *_builtin_and(Env *e, Object *o);
 static Object *_builtin_or(Env *e, Object *o);
 static Object *_builtin_lt(Env *e, Object *o);
 static Object *_builtin_gt(Env *e, Object *o);
+static Object *_builtin_load(Env *e, Object *o);
 
+int eval_program(const char *program, Env *env /*nullable*/, bool print_eval)
+{
+    bool free_env = false;
+    if (env == NULL) {
+        free_env = true;
+        env = env_new(NULL);
+        env_add_default_variables(env);
+    }
+
+    Arena *parser_arena = arena_new(0);
+    Lexer *lex = lexer_new(program, parser_arena);
+    Parser *parser = parser_new(lex, parser_arena);
+
+    Object *o = parser_parse(parser);
+
+    for (;;) {
+        if (parser->error) printf("parser has error \"%s\"", parser_error_string(parser)); 
+        else if (o == NULL) break;
+        else {
+            if (print_eval) {
+                object_print(eval(env, o));
+                putchar('\n');
+            } else eval(env, o);
+        }
+
+        if (parser_at_eof(parser)) break;
+        o = parser_parse(parser);
+        GC_collect_garbage(env, o);
+    }
+    
+    if (free_env) {
+        env_free(env);
+        GC_collect_garbage(NULL);
+    } else {
+        GC_collect_garbage(env);
+    }
+
+    arena_destroy(parser_arena);
+    return 0;
+}
 typedef struct { const char *name; Builtin func; } builtin_record;
 builtin_record builtins[] = {
     { "+", _builtin_add },
@@ -70,6 +114,7 @@ builtin_record builtins[] = {
     { "or", _builtin_or },
     { "<", _builtin_lt },
     { ">", _builtin_gt },
+    { "load", _builtin_load },
 };
 
 void env_add_default_variables(Env *e) 
@@ -544,4 +589,27 @@ static Object *_builtin_gt(Env *e, Object *o)
     EASSERT_TYPE(">", rhs, O_NUM);
 
     return  lhs->num > rhs->num ? object_num_new(1) : object_nil_new();
+}
+
+static Object *_builtin_load(Env *e, Object *o)
+{
+    EASSERT(o->kind == O_LIST, "load: needs an argument");
+    Object *file_path = eval_expr(e, o->list.car);
+    EASSERT_TYPE("load", file_path, O_STR);
+
+    char *file_path_cstr = malloc(sizeof(char) * (file_path->str.len + 1));
+    CHECK_ALLOC(file_path_cstr);
+
+    memcpy(file_path_cstr, file_path->str.ptr, file_path->str.len);
+    file_path_cstr[file_path->str.len] = '\0';
+
+    FILE *f = fopen(file_path_cstr, "r");
+    if (f == NULL) return object_error_new("load: couldn't open file");
+    char *program = file_to_str(f);
+    fclose(f);
+    int status = eval_program(program, e, false);
+    free(program); free(file_path_cstr);
+    if (status != 0) return object_error_new("load: error when evaluating program");
+
+    return object_nil_new();
 }

@@ -3,6 +3,7 @@
 
 #include "lexer.h"
 #include "object.h"
+#include "arena.h"
 
 enum ParserError {
     PE_NO_ERROR = 0,
@@ -18,7 +19,7 @@ typedef struct Parser {
     enum ParserError error;
 } Parser;
 
-Parser *parser_new(Lexer *l);
+Parser *parser_new(Lexer *l, Arena *a);
 Object *parser_parse(Parser *p);
 const char *parser_error_string(Parser *p);
 bool parser_at_eof(Parser *p);

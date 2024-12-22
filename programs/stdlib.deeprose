@@ -12,6 +12,12 @@
         (cons start 
               (range (inc start) end)))))
 
+(def range-step (\ (start end step)
+    (if (> start end)
+        (list start)
+        (cons start
+            (range-step (+ start step) end)))))
+
 (def map (\ (f xs)
     (if (= nil xs)
         nil

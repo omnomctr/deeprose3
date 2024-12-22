@@ -14,4 +14,10 @@
 #define DBG(...)
 #endif
 
+/* return malloc'ed string of line until newline */
+char *get_line(FILE *);
+char *file_to_str(FILE *f);
+
+
+
 #endif

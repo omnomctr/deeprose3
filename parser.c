@@ -13,9 +13,9 @@ const char * const parser_error_as_string_arr[] = {
     [PE_ILLEGAL_TOKEN] = "illegal token found",
 };
 
-Parser *parser_new(Lexer *l)
+Parser *parser_new(Lexer *l, Arena *a)
 {
-    Parser *ret = arena_alloc(l->arena, sizeof(Parser));
+    Parser *ret = arena_alloc(a, sizeof(Parser));
 
     ret->input = lexer_collect_tokens(l);
     ret->cursor = ret->input;
