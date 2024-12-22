@@ -1,6 +1,10 @@
-(def dec (\ (n) (- n 1)))
+(def true 1)
+(def false '())
 
+(def dec (\ (n) (- n 1)))
 (def inc (\ (n) (+ 1 n)))
+
+(def nil? (\ (xs) (= nil xs)))
 
 (def range (\ (start end)
     (if (= start end)
@@ -22,4 +26,12 @@
                   (filter pred? (rest xs)))
             (filter pred? (rest xs))))))
 
+(def foldr (\ (f accum xs)
+    (if (nil? xs)
+        accum
+        (f (first xs) (foldr f accum (rest xs))))))
+
 (def even? (\ (n) (= (mod n 2) 0)))
+(def odd? (\ (n) (not (even? n))))
+
+(def sum (\ (xs) (foldr + 0 xs)))

@@ -38,6 +38,11 @@ static Object *_builtin_print(Env *e, Object *o);
 static Object *_builtin_println(Env *e, Object *o);
 static Object *_builtin_list(Env *e, Object *o);
 static Object *_builtin_mod(Env *e, Object *o);
+static Object *_builtin_not(Env *e, Object *o);
+static Object *_builtin_and(Env *e, Object *o);
+static Object *_builtin_or(Env *e, Object *o);
+static Object *_builtin_lt(Env *e, Object *o);
+static Object *_builtin_gt(Env *e, Object *o);
 
 typedef struct { const char *name; Builtin func; } builtin_record;
 builtin_record builtins[] = {
@@ -60,6 +65,11 @@ builtin_record builtins[] = {
     { "println", _builtin_println },
     { "list", _builtin_list },
     { "mod", _builtin_mod },
+    { "not", _builtin_not },
+    { "and", _builtin_and },
+    { "or", _builtin_or },
+    { "<", _builtin_lt },
+    { ">", _builtin_gt },
 };
 
 void env_add_default_variables(Env *e) 
@@ -376,17 +386,66 @@ static Object *_builtin_equals(Env *e, Object *o)
     assert(0 && "infallible");
 }
 
+/* this is basically copy-pasted from object.c but the quotes from the strings are removed */
+static inline void _print_slice(struct StringSlice s)
+{
+    for (size_t i = 0; i < s.len; i++)
+        putchar(s.ptr[i]);
+}
+
+static void print(Object *o)
+{
+    switch (o->kind) {
+            case O_STR:
+                _print_slice(o->str);
+                break;
+            case O_NUM:
+                printf("%d", o->num);
+                break;
+            case O_IDENT:
+                _print_slice(o->str);
+                break;
+            case O_LIST:
+                printf("("); 
+                Object *cursor = o;
+                for (;;) {
+                    print(cursor->list.car);
+                    cursor = cursor->list.cdr;
+                    if (cursor->kind == O_NIL) break;
+                    else if (cursor->kind == O_LIST) putchar(' ');
+                    else { printf(" . "); print(cursor); break; }
+                }
+                printf(")");
+                break;
+            case O_NIL:
+                printf("nil");
+                break;
+            case O_ERROR:
+                printf("ERROR: ");
+                _print_slice(o->str);
+                break;
+            case O_BUILTIN:
+                printf("builtin <%p>", o->builtin);
+                break;
+            case O_FUNCTION:
+                print(o->function.arguments);
+                printf(" -> ");
+                print(o->function.body);
+                break;
+        }
+}
+
 static Object *_builtin_print(Env *e, Object *o)
 {
     EASSERT(o->kind == O_LIST, "print: needs an argument");
-    object_print(eval(e, o->list.car));
+    print(eval(e, o->list.car));
     return object_nil_new();
 }
 
 static Object *_builtin_println(Env *e, Object *o)
 {
-    EASSERT(o->kind == O_LIST, "println: needs an argument");
-    object_print(eval(e, o->list.car));
+    if (o->kind != O_LIST) { putchar('\n'); return object_nil_new(); }
+    print(eval(e, o->list.car));
     putchar('\n');
     return object_nil_new();
 }
@@ -429,4 +488,60 @@ static Object *_builtin_mod(Env *e, Object *o)
     Object *rhs = eval_expr(e, o->list.cdr->list.car);
 
     return object_num_new(lhs->num % rhs->num);
+}
+
+static Object *_builtin_not(Env *e, Object *o)
+{
+    EASSERT(o->kind == O_LIST, "not: needs an argument");
+
+    Object *boolean = eval_expr(e, o->list.car);
+    return boolean->kind == O_NIL ? object_num_new(1) : object_nil_new();
+}
+
+static Object *_builtin_and(Env *e, Object *o)
+{
+    while (o->kind == O_LIST) {
+        Object *boolean = eval_expr(e, o->list.car);
+        if (boolean->kind == O_NIL) return boolean;
+        o = o->list.cdr;
+    }
+
+    return object_num_new(1);
+}
+
+static Object *_builtin_or(Env *e, Object *o)
+{
+    while (o->kind == O_LIST) {
+        Object *boolean = eval_expr(e, o->list.car);
+        if (boolean->kind != O_NIL) return boolean;
+        o = o->list.cdr;
+    }
+
+    return object_nil_new();
+}
+
+static Object *_builtin_lt(Env *e, Object *o)
+{
+    EASSERT(o->kind == O_LIST, "<: needs two arguments");
+    EASSERT(o->list.cdr->kind == O_LIST, "<: needs two arguments");
+
+    Object *lhs = eval_expr(e, o->list.car);
+    EASSERT_TYPE("<", lhs, O_NUM);
+    Object *rhs = eval_expr(e, o->list.cdr->list.car);
+    EASSERT_TYPE("<", rhs, O_NUM);
+
+    return  lhs->num < rhs->num ? object_num_new(1) : object_nil_new();
+}
+
+static Object *_builtin_gt(Env *e, Object *o)
+{
+    EASSERT(o->kind == O_LIST, ">: needs two arguments");
+    EASSERT(o->list.cdr->kind == O_LIST, ">: needs two arguments");
+
+    Object *lhs = eval_expr(e, o->list.car);
+    EASSERT_TYPE(">", lhs, O_NUM);
+    Object *rhs = eval_expr(e, o->list.cdr->list.car);
+    EASSERT_TYPE(">", rhs, O_NUM);
+
+    return  lhs->num > rhs->num ? object_num_new(1) : object_nil_new();
 }

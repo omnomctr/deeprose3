@@ -81,7 +81,6 @@ int main(int argc, char *argv[])
             free(line);
         }
 
-        env_free(env); 
         GC_collect_garbage(NULL);
         arena_destroy(lexer_arena); 
     } else if (argc == 2) {

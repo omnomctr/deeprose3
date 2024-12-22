@@ -4,6 +4,7 @@
         1
         (* n (fact (dec n))))))
 
+(print "6!: ")
 (println (fact 6)) ;=> 720
 
 ; fibonacci sequence
@@ -13,8 +14,15 @@
         (cons current
               (fib current (+ prev current) (dec n))))))
 
-(println (fib 0 1 6)) ;=> (1 1 2 3 5 8)
+(print "the first 10 elements of the fibonacci sequence: ")
+(println (fib 0 1 10)) ;=> (1 1 2 3 5 8 13 21 34 55)
 
 ; maps and filters
+(print "even numbers from 0 to 10: ")
 (println (filter even? (range 0 10))) ;=> (0 2 4 6 8 10)
+(print "(1 2 3) mapped with inc (+1): ")
 (println (map inc '(1 2 3))) ;=> (2 3 4)
+
+(print "sum of 1 to 10: ")
+(println (sum (range 1 10))) ;=> 55
+
