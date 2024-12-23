@@ -9,13 +9,13 @@
 
 ; fibonacci sequence
 (def fib (\ (n)
-    (let (fib-internal 
+    (let (fib^
            (\ (prev current n)
             (if (= n 0)
               (list)
               (cons current 
-                    (fib-internal current (+ prev current) (dec n))))))
-      (fib-internal 0 1 n))))
+                    (fib^ current (+ prev current) (dec n))))))
+      (fib^ 0 1 n))))
 
 
 (print "the first 10 elements of the fibonacci sequence: ")
@@ -29,3 +29,14 @@
 (print "sum of 1 to 10: ")
 (println (sum (range 1 10))) ;=> 55
 
+(def quicksort (\ (xs)
+    (if (nil? xs) 
+        (list)
+        (let (x (first xs)
+              xs (rest xs))
+          (concat (quicksort (filter (\ (n) (< n x)) xs))
+                  (list x)
+                  (quicksort (filter (\ (n) (>= n x)) xs)))))))
+        
+(print "quicksort (5 6 3 2 3 4 6 7): ")
+(println (quicksort '(5 6 3 2 3 4 6 7))) ;=> (2 3 3 4 5 6 6 7)

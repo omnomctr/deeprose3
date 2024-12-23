@@ -292,6 +292,28 @@ static Object *_builtin_def(Env *e, Object *o)
     return object_nil_new();
 }
 
+static Object *_eval_list_elements(Env *e, Object *o)
+{
+    if (o->kind != O_LIST) return object_new_generic();
+    Object *ret = object_new_generic();
+    ret->kind = O_LIST;
+
+    Object *cursor = ret;
+    while (o->kind != O_NIL) {
+        cursor->list.car = eval_expr(e, o->list.car);
+        o = o->list.cdr;
+        if (o->kind != O_LIST) {
+            cursor->list.cdr = object_nil_new();
+        } else {
+            cursor->list.cdr = object_new_generic();
+            cursor = cursor->list.cdr;
+            cursor->kind = O_LIST;
+        }
+    }
+
+    return ret;
+}
+
 static Object *_eval_sexpr(Env *e, Object *o)
 {
     assert(o->kind == O_LIST);
@@ -309,10 +331,26 @@ static Object *_eval_sexpr(Env *e, Object *o)
         assert(f->kind == O_FUNCTION);
         Env *env = env_new(f->function.env);
 
+        bool variadic = false;
         {
             Object *cursor = f->function.arguments;
             Object *args_cursor = o->list.cdr;
             while (cursor->kind != O_NIL) {
+                char ampersand[] = "&";
+                if (cursor->list.car->str.len == strlen(ampersand) 
+                        && memcmp(cursor->list.car->str.ptr, ampersand, cursor->list.car->str.len) == 0) {
+
+                    EASSERT(cursor->list.cdr->kind != O_NIL 
+                            && cursor->list.cdr->list.car->kind == O_IDENT, 
+                            "function needs identifier past ampersand for variadics");
+
+                    /* give it an empty list if there are no variadic args */
+                    if (args_cursor->kind == O_NIL) env_put(env, cursor->list.cdr->list.car, object_nil_new());
+                    else env_put(env, cursor->list.cdr->list.car, _eval_list_elements(e, args_cursor));
+
+                    variadic = true;
+                    break;
+                }
                 if (args_cursor->kind == O_NIL) {
                     return object_error_new("function passed too few values");
                 }
@@ -322,7 +360,7 @@ static Object *_eval_sexpr(Env *e, Object *o)
                 cursor = cursor->list.cdr;
                 args_cursor = args_cursor->list.cdr;
             }
-            if (args_cursor->kind != O_NIL) {
+            if (!variadic && args_cursor->kind != O_NIL) {
                 return object_error_new("function %s passed too many values", o->list.car);
             }
         }
@@ -368,7 +406,7 @@ static Object *_builtin_lambda(Env *e, Object *o)
 
     EASSERT(o->list.cdr->kind == O_LIST, "\\ needs two arguments");
     Object *body = o->list.cdr->list.car;
-    EASSERT_TYPE("\\", body, O_LIST);
+    //EASSERT_TYPE("\\", body, O_LIST);
 
     Env *f_env = env_new(e);
 

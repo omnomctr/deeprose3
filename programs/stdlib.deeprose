@@ -26,10 +26,10 @@
                   (filter pred? (rest xs)))
             (filter pred? (rest xs))))))
 
-(def foldr (\ (f accum xs)
+(def fold (\ (f accum xs)
     (if (nil? xs)
         accum
-        (f (first xs) (foldr f accum (rest xs))))))
+        (f (first xs) (fold f accum (rest xs))))))
 
 (def zip-with (\ (f xs ys)
     (if (or (nil? xs) (nil? ys))
@@ -43,7 +43,7 @@
 (def even? (\ (n) (= (mod n 2) 0)))
 (def odd? (\ (n) (not (even? n))))
 
-(def sum (\ (xs) (foldr + 0 xs)))
+(def sum (\ (xs) (fold + 0 xs)))
 
 (def <= (\ (a b)
     (or (< a b)
@@ -58,7 +58,7 @@
       (+ 1 (len (rest xs))))))
 
 (def elem? (\ (a xs)
-    (foldr (\ (x accum) (or accum (= a x))) false xs)))
+    (fold (\ (x accum) (or accum (= a x))) false xs)))
 
 (def take (\ (n xs)
     (if (= n 0)
@@ -74,3 +74,21 @@
     (if (= n 0)
         1
         (* base (^ base (dec n))))))
+
+(def max (\ (x & xs)
+    (let (max^ (\ (a b)
+                 (if (> a b) a b)))
+      (fold max^ x xs))))
+
+(def min (\ (x & xs)
+    (let (min^ (\ (a b)
+                 (if (< a b) a b)))
+      (fold min^ x xs))))
+
+(def concat (\ (& xs)
+    (let (concat^ (\ (xs ys)
+                    (if (nil? xs) 
+                        ys
+                        (cons (first xs) (concat^ (rest xs) ys)))))
+      (fold concat^ nil xs))))
+
