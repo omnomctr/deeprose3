@@ -18,11 +18,9 @@ Object *on_error_error = NULL;
 #define EASSERT_TYPE(f_name, obj, expected_type) \
     do { if ((obj)->kind != (expected_type)) { \
           if ((obj)->kind == O_ERROR) return o; \
-          else return object_error_new(f_name ": expected %s, got %s", \
-                  object_string_slice_new(object_type_as_string(expected_type), \
-                      strlen(object_type_as_string(expected_type))), \
-                  object_string_slice_new(object_type_as_string((obj)->kind), \
-                      strlen(object_type_as_string((obj)->kind)))); \
+          else return object_error_new(f_name ": expected %sc, got %sc", \
+                  object_type_as_string((expected_type)), \
+                  object_type_as_string((obj)->kind)); \
                       } } while(0);
 
 static Object *_eval_sexpr(Env *e, Object *o);
@@ -305,6 +303,9 @@ static Object *_eval_sexpr(Env *e, Object *o)
 
     if (f->kind == O_BUILTIN) return f->builtin(e, o->list.cdr);
     else {
+        if (f->kind != O_FUNCTION) {
+            return object_error_new("invalid function call, expected function got %sc", object_type_as_string(f->kind));
+        }
         assert(f->kind == O_FUNCTION);
         Env *env = env_new(f->function.env);
 
@@ -351,8 +352,7 @@ static Object *_builtin_lambda(Env *e, Object *o)
     EASSERT(o->kind == O_LIST, "\\ needs arguments");
     Object *arguments = o->list.car;
     if (arguments->kind != O_LIST && arguments->kind != O_NIL) {
-        const char *object_type = object_type_as_string(arguments->kind);
-        return object_error_new("\\: expected list, got %s", object_string_slice_new(object_type, strlen(object_type)));
+        return object_error_new("\\: expected list, got %sc", object_type_as_string(arguments->kind));
     }
 
     if (arguments->kind == O_LIST) {
@@ -619,9 +619,7 @@ static Object *_builtin_let(Env *e, Object *o)
         Object *ident = vars->list.car;
         if (ident->kind != O_IDENT) {
             env_free(new_env);
-            const char *object_type = object_type_as_string(ident->kind);
-            return object_error_new("let: exepected identifier in argslist, got %s", 
-                    object_string_slice_new(object_type, strlen(object_type)));
+            return object_error_new("let: exepected identifier in argslist, got %sc", object_type_as_string(ident->kind));
         }
         EASSERT(vars->list.cdr->kind == O_LIST, "let: needs an even number of variable declarations");
         Object *value = eval_expr(new_env, vars->list.cdr->list.car);

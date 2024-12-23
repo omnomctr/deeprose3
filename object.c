@@ -138,15 +138,28 @@ Object *object_error_new(const char *fmt, ...)
                     fmt++;
                 } break;
                 case 's': {
-                    Object *string = va_arg(ap, Object *);
-                    assert(string->kind == O_STR || string->kind == O_IDENT);
-                    if (ret->str.len + string->str.len >= ret->str.capacity) {
-                        ret->str.capacity += string->str.len;
-                        ret->str.ptr = realloc(ret->str.ptr, sizeof(char) * ret->str.capacity);
-                        CHECK_ALLOC(ret->str.ptr);
+                    if (*fmt == 'c') /* null-terminated c string */ {
+                        fmt++;
+                        const char *str = va_arg(ap, char *);
+                        size_t len = strlen(str);
+                        if (ret->str.len + len >= ret->str.capacity) {
+                            ret->str.capacity += len;
+                            ret->str.ptr = realloc(ret->str.ptr, sizeof(char) * ret->str.capacity);
+                            CHECK_ALLOC(ret->str.ptr);
+                        }
+                        memcpy(ret->str.ptr + ret->str.len, str, len);
+                        ret->str.len += len;
+                    } else {
+                        Object *string = va_arg(ap, Object *);
+                        assert(string->kind == O_STR || string->kind == O_IDENT);
+                        if (ret->str.len + string->str.len >= ret->str.capacity) {
+                            ret->str.capacity += string->str.len;
+                            ret->str.ptr = realloc(ret->str.ptr, sizeof(char) * ret->str.capacity);
+                            CHECK_ALLOC(ret->str.ptr);
+                        }
+                        memcpy(ret->str.ptr + ret->str.len, string->str.ptr, string->str.len);
+                        ret->str.len += string->str.len;
                     }
-                    memcpy(ret->str.ptr + ret->str.len, string->str.ptr, string->str.len);
-                    ret->str.len += string->str.len;
                 } break;
                 case 'd': {
                     Object *num = va_arg(ap, Object *);

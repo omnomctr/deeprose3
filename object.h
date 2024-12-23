@@ -8,8 +8,6 @@
 #include <stdint.h>
 #include "arena.h"
 
-#define INITIAL_OBJECT_GC_MAX 32
-
 typedef enum { MARKED, NOT_MARKED } Mark;
 
 typedef struct Object Object;
