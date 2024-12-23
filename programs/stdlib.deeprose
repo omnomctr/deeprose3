@@ -53,7 +53,7 @@
         (= a b))))
 
 (def len (\ (xs)
-    (if (null? xs)
+    (if (nil? xs)
       0
       (+ 1 (len (rest xs))))))
 
