@@ -9,11 +9,11 @@ has a garbage collector, lists as first class functions and extensibility with t
 
 **dependencies**: gcc, make, rlwrap
 
-``
+```sh
 $ git clone https://github.com/omnomctr/deeprose3
 
 $ cd deeprose3
 $ make # to compile, find the binary in .build/
 $ make run # compile and run rlwrap deeprose3 
-``
+```
 
