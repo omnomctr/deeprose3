@@ -52,6 +52,7 @@ static Object *_builtin_or(Env *e, Object *o);
 static Object *_builtin_lt(Env *e, Object *o);
 static Object *_builtin_gt(Env *e, Object *o);
 static Object *_builtin_load(Env *e, Object *o);
+static Object *_builtin_let(Env *e, Object *o);
 
 typedef struct { const char *name; Builtin func; } builtin_record;
 builtin_record builtins[] = {
@@ -80,6 +81,7 @@ builtin_record builtins[] = {
     { "<", _builtin_lt },
     { ">", _builtin_gt },
     { "load", _builtin_load },
+    { "let", _builtin_let },
 };
 
 void env_add_default_variables(Env *e) 
@@ -602,4 +604,31 @@ static Object *_builtin_load(Env *e, Object *o)
     if (status != 0) return object_error_new("load: error when evaluating program");
 
     return object_nil_new();
+}
+
+static Object *_builtin_let(Env *e, Object *o)
+{
+    EASSERT(o->kind == O_LIST, "let: needs at least two arguments");
+    EASSERT(o->list.cdr->kind == O_LIST, "let: needs at least two arguments");
+
+    Env *new_env = env_new(e);
+    Object *vars = o->list.car;
+    while (vars->kind == O_LIST) {
+        Object *ident = vars->list.car;
+        if (ident->kind != O_IDENT) {
+            env_free(new_env);
+            const char *object_type = object_type_as_string(ident->kind);
+            return object_error_new("let: exepected identifier in argslist, got %s", 
+                    object_string_slice_new(object_type, strlen(object_type)));
+        }
+        EASSERT(vars->list.cdr->kind == O_LIST, "let: needs an even number of variable declarations");
+        Object *value = eval_expr(new_env, vars->list.cdr->list.car);
+        env_put(new_env, ident, value);
+        
+        vars = vars->list.cdr->list.cdr;
+    }
+
+    Object *ret = eval_expr(new_env, o->list.cdr->list.car);
+    env_free(new_env);
+    return ret;
 }

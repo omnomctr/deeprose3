@@ -89,7 +89,7 @@ void token_print(Token *t)
             _print_token_string_slice(t);
             printf("}");
             break;
-        case t_NUM: printf("{number %d}", t->num); break;
+        case t_NUM: printf("{number %ld}", t->num); break;
         case t_ILLEGAL: printf("{illegal token: line %zu}", t->line); break;
     }
 }
@@ -164,11 +164,11 @@ static Token *_read_number(Lexer *l)
 
     /* TODO: support double negative ie. --1. in python that would give you positive 1, 
      * here it gives you a 0 token, and then the positive number token */
-    int32_t num = 0;
+    int64_t num = 0;
     bool is_negative_num = t->string_slice.ptr[0] == '-';
     for (size_t i = is_negative_num ? 1 : 0; i < t->string_slice.len; i++) {
         num *= 10;
-        num += (int32_t)t->string_slice.ptr[i] - (int32_t)'0';
+        num += (int64_t)t->string_slice.ptr[i] - (int64_t)'0';
     }
     if (is_negative_num) num *= -1;
 

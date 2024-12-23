@@ -8,14 +8,17 @@
 (println (fact 6)) ;=> 720
 
 ; fibonacci sequence
-(def fib (\ (prev current n)
-    (if (= n 1)
-        (list current)
-        (cons current
-              (fib current (+ prev current) (dec n))))))
+(def fib (\ (n)
+    (let (fib-internal 
+           (\ (prev current n)
+            (if (= n 0)
+              (list)
+              (cons current 
+                    (fib-internal current (+ prev current) (dec n))))))
+      (fib-internal 0 1 n))))
 
 (print "the first 10 elements of the fibonacci sequence: ")
-(println (fib 0 1 10)) ;=> (1 1 2 3 5 8 13 21 34 55)
+(println (fib 10)) ;=> (1 1 2 3 5 8 13 21 34 55)
 
 ; maps and filters
 (print "even numbers from 0 to 10: ")

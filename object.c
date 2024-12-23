@@ -87,7 +87,7 @@ Object *object_builtin_new(Builtin f)
     return ret;
 }
 
-Object *object_num_new(int32_t num)
+Object *object_num_new(int64_t num)
 {
     Object *ret = object_new_generic();
     ret->kind = O_NUM;
@@ -153,7 +153,7 @@ Object *object_error_new(const char *fmt, ...)
                     assert(num->kind == O_NUM);
                     char *num_cstr = malloc(sizeof(char) * ERROR_NUM_MAX_STR_SIZE);
                     CHECK_ALLOC(num_cstr);
-                    snprintf(num_cstr, ERROR_NUM_MAX_STR_SIZE, "%d", num->num);
+                    snprintf(num_cstr, ERROR_NUM_MAX_STR_SIZE, "%ld", num->num);
                     size_t len = strlen(num_cstr);
 
                     if (ret->str.len + len >= ret->str.capacity) {
@@ -236,7 +236,7 @@ void object_print(Object *o)
             putchar('"');
             break;
         case O_NUM:
-            printf("%d", o->num);
+            printf("%ld", o->num);
             break;
         case O_IDENT:
             _print_slice(o->str);
