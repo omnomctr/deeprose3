@@ -17,9 +17,9 @@
                     (fib-internal current (+ prev current) (dec n))))))
       (fib-internal 0 1 n))))
 
+
 (print "the first 10 elements of the fibonacci sequence: ")
 (println (fib 10)) ;=> (1 1 2 3 5 8 13 21 34 55)
-
 ; maps and filters
 (print "even numbers from 0 to 10: ")
 (println (filter even? (range 0 10))) ;=> (0 2 4 6 8 10)

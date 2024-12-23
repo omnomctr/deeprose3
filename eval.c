@@ -53,6 +53,7 @@ static Object *_builtin_lt(Env *e, Object *o);
 static Object *_builtin_gt(Env *e, Object *o);
 static Object *_builtin_load(Env *e, Object *o);
 static Object *_builtin_let(Env *e, Object *o);
+static Object *_builtin_do(Env *e, Object *o);
 
 typedef struct { const char *name; Builtin func; } builtin_record;
 builtin_record builtins[] = {
@@ -82,6 +83,7 @@ builtin_record builtins[] = {
     { ">", _builtin_gt },
     { "load", _builtin_load },
     { "let", _builtin_let },
+    { "do", _builtin_do },
 };
 
 void env_add_default_variables(Env *e) 
@@ -171,7 +173,7 @@ _Noreturn void report_error(Object *o)
 static Object *_builtin_add(Env *e, Object *o)
 {
     EASSERT(o->kind == O_LIST, "+ requires arguments");
-    int32_t num = 0;
+    int64_t num = 0;
     while (o->kind == O_LIST) {
         Object *to_add = eval_expr(e, o->list.car);
         EASSERT_TYPE("+", to_add, O_NUM);
@@ -186,7 +188,7 @@ static Object *_builtin_subtract(Env *e, Object *o)
     EASSERT(o->kind == O_LIST, "- requires arguments");
     Object *lhs_object = eval_expr(e, o->list.car);
     EASSERT_TYPE("-", lhs_object, O_NUM);
-    int32_t lhs = lhs_object->num;
+    int64_t lhs = lhs_object->num;
     o = o->list.cdr;
     if (o->kind != O_LIST) /* unary minus */
         lhs *= -1;
@@ -204,7 +206,7 @@ static Object *_builtin_subtract(Env *e, Object *o)
 static Object *_builtin_multiply(Env *e, Object *o) 
 {
     EASSERT(o->kind == O_LIST, "* requires arguments");
-    int32_t num = 1;
+    int64_t num = 1;
 
     while (o->kind == O_LIST) {
         Object *to_mult = eval_expr(e, o->list.car);
@@ -221,7 +223,7 @@ static Object *_builtin_divide(Env *e, Object *o)
     EASSERT(o->kind == O_LIST, "/ requires arguments");
     Object *lhs_object = eval_expr(e, o->list.car);
     EASSERT_TYPE("/", lhs_object, O_NUM);
-    int32_t lhs = lhs_object->num;
+    int64_t lhs = lhs_object->num;
     o = o->list.cdr;
 
     while (o->kind == O_LIST) {
@@ -437,7 +439,7 @@ static void print(Object *o)
                 _print_slice(o->str);
                 break;
             case O_NUM:
-                printf("%d", o->num);
+                printf("%ld", o->num);
                 break;
             case O_IDENT:
                 _print_slice(o->str);
@@ -632,3 +634,15 @@ static Object *_builtin_let(Env *e, Object *o)
     env_free(new_env);
     return ret;
 }
+
+static Object *_builtin_do(Env *e, Object *o)
+{
+    while (o->kind == O_LIST) {
+        if (o->list.cdr->kind == O_NIL) return eval_expr(e, o->list.car);
+        (void)eval_expr(e, o->list.car);
+        o = o->list.cdr;
+    }
+
+    return o;
+}
+
