@@ -17,3 +17,11 @@ $ make # to compile, find the binary in .build/
 $ make run # compile and run rlwrap deeprose3 
 ```
 
+# TODO
+find all TODO's in the code:
+```ch
+grep -rn "TODO" *.[ch]
+```
+* make builtins more redundant to too many arguments
+* add dynamic loading with `dlopen`?
+* add namespaces maybe
