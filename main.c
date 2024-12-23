@@ -13,7 +13,7 @@ int main(int argc, char *argv[])
     env_add_default_variables(env);
     eval_program(stdlib, env, false);
 
-    if (argc == 2 && strcmp(argv[1], "-repl") == 0) {
+    if (argc == 1) {
         Arena *lexer_arena = arena_new(0);
 
         for (;;) {

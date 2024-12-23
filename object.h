@@ -24,7 +24,7 @@ struct List {
     Object *cdr;
 };
 
-#define OBJECT_ERROR_STR_MAX_SIZE 1024
+#define ERROR_NUM_MAX_STR_SIZE 256
 
 enum ObjectKind {
     O_STR, O_NUM, O_LIST, O_IDENT, O_NIL, O_ERROR, O_BUILTIN, O_FUNCTION,

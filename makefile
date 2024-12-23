@@ -1,12 +1,12 @@
 BUILDDIR = ./.build
-CFLAGS = -Wall -ggdb
+CFLAGS = -Wall 
 CC = gcc
 
 all: $(BUILDDIR)/deeprose
 
 run:
 	@make all
-	rlwrap $(BUILDDIR)/deeprose -repl
+	rlwrap $(BUILDDIR)/deeprose 
 
 $(BUILDDIR)/%.o: %.c %.h
 	@mkdir -p $(BUILDDIR)

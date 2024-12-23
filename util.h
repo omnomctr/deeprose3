@@ -18,6 +18,4 @@
 char *get_line(FILE *);
 char *file_to_str(FILE *f);
 
-
-
 #endif

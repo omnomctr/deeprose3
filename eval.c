@@ -18,7 +18,12 @@ Object *on_error_error = NULL;
 #define EASSERT_TYPE(f_name, obj, expected_type) \
     do { if ((obj)->kind != (expected_type)) { \
           if ((obj)->kind == O_ERROR) return o; \
-          else return object_error_new(f_name ": expected %s, got %s", object_type_as_string(expected_type), object_type_as_string((obj)->kind)); } } while(0);
+          else return object_error_new(f_name ": expected %s, got %s", \
+                  object_string_slice_new(object_type_as_string(expected_type), \
+                      strlen(object_type_as_string(expected_type))), \
+                  object_string_slice_new(object_type_as_string((obj)->kind), \
+                      strlen(object_type_as_string((obj)->kind)))); \
+                      } } while(0);
 
 static Object *_eval_sexpr(Env *e, Object *o);
 
@@ -48,46 +53,6 @@ static Object *_builtin_lt(Env *e, Object *o);
 static Object *_builtin_gt(Env *e, Object *o);
 static Object *_builtin_load(Env *e, Object *o);
 
-int eval_program(const char *program, Env *env /*nullable*/, bool print_eval)
-{
-    bool free_env = false;
-    if (env == NULL) {
-        free_env = true;
-        env = env_new(NULL);
-        env_add_default_variables(env);
-    }
-
-    Arena *parser_arena = arena_new(0);
-    Lexer *lex = lexer_new(program, parser_arena);
-    Parser *parser = parser_new(lex, parser_arena);
-
-    Object *o = parser_parse(parser);
-
-    for (;;) {
-        if (parser->error) printf("parser has error \"%s\"", parser_error_string(parser)); 
-        else if (o == NULL) break;
-        else {
-            if (print_eval) {
-                object_print(eval(env, o));
-                putchar('\n');
-            } else eval(env, o);
-        }
-
-        if (parser_at_eof(parser)) break;
-        o = parser_parse(parser);
-        GC_collect_garbage(env, o);
-    }
-    
-    if (free_env) {
-        env_free(env);
-        GC_collect_garbage(NULL);
-    } else {
-        GC_collect_garbage(env);
-    }
-
-    arena_destroy(parser_arena);
-    return 0;
-}
 typedef struct { const char *name; Builtin func; } builtin_record;
 builtin_record builtins[] = {
     { "+", _builtin_add },
@@ -125,6 +90,47 @@ void env_add_default_variables(Env *e)
     }
     char nil_ident[] = "nil";
     env_put(e, object_ident_new(nil_ident, strlen(nil_ident)), object_nil_new());
+}
+
+int eval_program(const char *program, Env *env /*nullable*/, bool print_eval)
+{
+    bool free_env = false;
+    if (env == NULL) {
+        free_env = true;
+        env = env_new(NULL);
+        env_add_default_variables(env);
+    }
+
+    Arena *parser_arena = arena_new(0);
+    Lexer *lex = lexer_new(program, parser_arena);
+    Parser *parser = parser_new(lex, parser_arena);
+
+    Object *o = parser_parse(parser);
+
+    for (;;) {
+        if (parser->error) printf("parser has error \"%s\"\n", parser_error_string(parser)); 
+        else if (o == NULL) break;
+        else {
+            if (print_eval) {
+                object_print(eval(env, o));
+                putchar('\n');
+            } else eval(env, o);
+        }
+
+        if (parser_at_eof(parser)) break;
+        o = parser_parse(parser);
+        GC_collect_garbage(env, o);
+    }
+    
+    if (free_env) {
+        env_free(env);
+        GC_collect_garbage(NULL);
+    } else {
+        GC_collect_garbage(env);
+    }
+
+    arena_destroy(parser_arena);
+    return 0;
 }
 
 Object *eval_expr(Env *e, Object *o)
@@ -311,31 +317,13 @@ static Object *_eval_sexpr(Env *e, Object *o)
                 cursor = cursor->list.cdr;
                 args_cursor = args_cursor->list.cdr;
             }
-#if 0
-            /* TODO function expressions dont work with this but 
-             * then we cant catch too many arguments being passed
-             * to a function */
             if (args_cursor->kind != O_NIL) {
-                return object_error_new("function passed too many values");
+                return object_error_new("function %s passed too many values", o->list.car);
             }
-#endif
         }
 
         Object *res = eval_expr(env, f->function.body);
         env_free(env);
-#if 0
-        /* TODO: figure out why enabling the gc leads to a segfault when running this program:
-         * (def fib (\ (prev current n)
-         *      (if (= n 1)
-         *          (cons current nil)
-         *          (cons current (fib current (+ prev current) (dec n))))))
-         */
-
-(println (fib 0 1 20))
-
-
-        GC_collect_garbage(env, res);
-#endif
         return res;
     }
 }
@@ -358,8 +346,10 @@ static Object *_builtin_lambda(Env *e, Object *o)
 {
     EASSERT(o->kind == O_LIST, "\\ needs arguments");
     Object *arguments = o->list.car;
-    if (arguments->kind != O_LIST && arguments->kind != O_NIL) 
-        return object_error_new("\\: expected list, got %s", object_type_as_string(arguments->kind));
+    if (arguments->kind != O_LIST && arguments->kind != O_NIL) {
+        const char *object_type = object_type_as_string(arguments->kind);
+        return object_error_new("\\: expected list, got %s", object_string_slice_new(object_type, strlen(object_type)));
+    }
 
     if (arguments->kind == O_LIST) {
         /* make sure all the arguments are identifiers */

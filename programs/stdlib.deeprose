@@ -12,12 +12,6 @@
         (cons start 
               (range (inc start) end)))))
 
-(def range-step (\ (start end step)
-    (if (> start end)
-        (list start)
-        (cons start
-            (range-step (+ start step) end)))))
-
 (def map (\ (f xs)
     (if (= nil xs)
         nil
@@ -37,7 +31,46 @@
         accum
         (f (first xs) (foldr f accum (rest xs))))))
 
+(def zip-with (\ (f xs ys)
+    (if (or (nil? xs) (nil? ys))
+        nil
+        (cons (f (first xs) (first xs)) 
+              (zip-with f (rest xs) (rest xs))))))
+
+(def zip (\ (xs ys)
+    (zip-with list xs ys)))
+
 (def even? (\ (n) (= (mod n 2) 0)))
 (def odd? (\ (n) (not (even? n))))
 
 (def sum (\ (xs) (foldr + 0 xs)))
+
+(def <= (\ (a b)
+    (or (< a b)
+        (= a b))))
+(def >= (\ (a b)
+    (or (> a b)
+        (= a b))))
+
+(def len (\ (xs)
+    (if (null? xs)
+      0
+      (+ 1 (len (rest xs))))))
+
+(def elem? (\ (a xs)
+    (foldr (\ (x accum) (or accum (= a x))) false xs)))
+
+(def take (\ (n xs)
+    (if (= n 0)
+        nil
+        (cons (first xs) (take (dec n) (rest xs))))))
+
+(def nth (\ (n xs)
+    (if (= n 1)
+        (first xs)
+        (nth (dec n) (rest xs)))))
+
+(def ^ (\ (base n)
+    (if (= n 0)
+        1
+        (* base (^ base (dec n))))))

@@ -58,6 +58,6 @@ Object *env_get(Env *e, Object *ident)
     }
 
     if (e->parent != NULL) return env_get(e->parent, ident);
-    else return object_error_new("identifier not found");
+    else return object_error_new("identifier \"%s\" not found", ident);
 }
 

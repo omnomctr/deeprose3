@@ -104,27 +104,84 @@ Object *object_nil_new(void)
     return ret;
 }
 
+static inline void _resize_string_slice_if_needed(Object *o)
+{
+    if (o->str.len < o->str.capacity) return; 
+    o->str.capacity *= 2;
+    o->str.ptr = realloc(o->str.ptr, sizeof(char) * o->str.capacity);
+    CHECK_ALLOC(o->str.ptr);
+}
+
 Object *object_error_new(const char *fmt, ...)
 {
     Object *ret = object_new_generic();
     ret->kind = O_ERROR;
-
-    /* TODO: make a custon vsnprintf function that supports string slices
-     * & growable strings on the heap */
-
-    va_list va;
-    va_start(va, fmt);
-    ret->str.capacity = OBJECT_ERROR_STR_MAX_SIZE;
-    ret->str.ptr = malloc(sizeof(char) * OBJECT_ERROR_STR_MAX_SIZE);
-    CHECK_ALLOC(ret->str.ptr);
-
-    vsnprintf(ret->str.ptr, OBJECT_ERROR_STR_MAX_SIZE - 1, fmt, va);
     
-    ret->str.capacity = ret->str.len = strlen(ret->str.ptr);
-    ret->str.ptr = realloc(ret->str.ptr, ret->str.capacity); 
+    ret->str.capacity = 10;
+    ret->str.len = 0;
+    ret->str.ptr = malloc(sizeof(char) * ret->str.capacity);
     CHECK_ALLOC(ret->str.ptr);
 
-    va_end(va);
+    va_list ap;
+    va_start(ap, fmt);
+    while (*fmt) 
+        if (*fmt == '%') {
+            fmt++;
+            switch (*fmt++) { 
+                case '%': {
+                    if (ret->str.len >= ret->str.capacity) {
+                        ret->str.capacity *= 2;
+                        ret->str.ptr = realloc(ret->str.ptr, sizeof(char) * ret->str.capacity);
+                        CHECK_ALLOC(ret->str.ptr);                       
+                    }
+                    ret->str.ptr[ret->str.len++] = '%';
+                    fmt++;
+                } break;
+                case 's': {
+                    Object *string = va_arg(ap, Object *);
+                    assert(string->kind == O_STR || string->kind == O_IDENT);
+                    if (ret->str.len + string->str.len >= ret->str.capacity) {
+                        ret->str.capacity += string->str.len;
+                        ret->str.ptr = realloc(ret->str.ptr, sizeof(char) * ret->str.capacity);
+                        CHECK_ALLOC(ret->str.ptr);
+                    }
+                    memcpy(ret->str.ptr + ret->str.len, string->str.ptr, string->str.len);
+                    ret->str.len += string->str.len;
+                } break;
+                case 'd': {
+                    Object *num = va_arg(ap, Object *);
+                    assert(num->kind == O_NUM);
+                    char *num_cstr = malloc(sizeof(char) * ERROR_NUM_MAX_STR_SIZE);
+                    CHECK_ALLOC(num_cstr);
+                    snprintf(num_cstr, ERROR_NUM_MAX_STR_SIZE, "%d", num->num);
+                    size_t len = strlen(num_cstr);
+
+                    if (ret->str.len + len >= ret->str.capacity) {
+                        ret->str.capacity += len;
+                        ret->str.ptr = realloc(ret->str.ptr, sizeof(char) * ret->str.capacity);
+                        CHECK_ALLOC(ret->str.ptr);
+                    }
+                    memcpy(ret->str.ptr + ret->str.len, num_cstr, len);
+                    ret->str.len += len;
+                    free(num_cstr);
+                } break;
+                default: assert(0);
+            } 
+        } else {
+            if (ret->str.len >= ret->str.capacity) {
+                ret->str.capacity *= 2;
+                ret->str.ptr = realloc(ret->str.ptr, sizeof(char) * ret->str.capacity);
+                CHECK_ALLOC(ret->str.ptr);
+            }
+            ret->str.ptr[ret->str.len++] = *fmt++;
+        }
+
+    ret->str.capacity = ret->str.len;
+    ret->str.ptr = realloc(ret->str.ptr, sizeof(char) * ret->str.capacity);
+    CHECK_ALLOC(ret->str.ptr);
+
+    va_end(ap);
+
     report_error(ret);
     return ret;
 }
