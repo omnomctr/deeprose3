@@ -64,6 +64,11 @@
         nil
         (cons (first xs) (take (dec n) (rest xs))))))
 
+(def drop (\ (n xs)
+    (if (= n 0)
+        xs
+        (drop (dec n) (rest xs)))))
+
 (def nth (\ (n xs)
     (if (= n 1)
         (first xs)
@@ -91,3 +96,5 @@
                         (cons (first xs) (concat^ (rest xs) ys)))))
       (fold concat^ nil xs))))
 
+(def apply (\ (f xs)
+    (eval (cons f xs))))

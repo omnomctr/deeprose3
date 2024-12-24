@@ -21,7 +21,7 @@ const char * const stdlib = {"''')
 
         if char == '\n':
             continue;
-        elif char == '\\' or char == '"':
+        elif char == '\\' or char == '"' or char == "'":
             out.write('\\')
         
         out.write(char)
