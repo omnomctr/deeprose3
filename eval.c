@@ -52,6 +52,7 @@ static Object *_builtin_gt(Env *e, Object *o);
 static Object *_builtin_load(Env *e, Object *o);
 static Object *_builtin_let(Env *e, Object *o);
 static Object *_builtin_do(Env *e, Object *o);
+static Object *_builtin_cond(Env *e, Object *o);
 
 typedef struct { const char *name; Builtin func; } builtin_record;
 builtin_record builtins[] = {
@@ -82,6 +83,7 @@ builtin_record builtins[] = {
     { "load", _builtin_load },
     { "let", _builtin_let },
     { "do", _builtin_do },
+    { "cond", _builtin_cond },
 };
 
 void env_add_default_variables(Env *e) 
@@ -682,3 +684,18 @@ static Object *_builtin_do(Env *e, Object *o)
     return o;
 }
 
+static Object *_builtin_cond(Env *e, Object *o)
+{
+    while (o->kind == O_LIST) {
+        EASSERT(o->list.cdr->kind == O_LIST, "cond: needs an even number of arguments");
+        Object *boolean = eval_expr(e, o->list.car);
+
+        if (boolean->kind != O_NIL) {
+            return eval_expr(e, o->list.cdr->list.car);
+        } else {
+            o = o->list.cdr->list.cdr;
+        }
+    }
+
+    return object_nil_new();
+}

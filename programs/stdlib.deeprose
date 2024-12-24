@@ -1,5 +1,6 @@
 (def true 1)
 (def false '())
+(def otherwise true)
 
 (def dec (\ (n) (- n 1)))
 (def inc (\ (n) (+ 1 n)))
@@ -19,12 +20,10 @@
               (map f (rest xs))))))
 
 (def filter (\ (pred? xs)
-    (if (= nil xs)
-        nil
-        (if (pred? (first xs))
-            (cons (first xs)
-                  (filter pred? (rest xs)))
-            (filter pred? (rest xs))))))
+    (cond (nil? xs) nil
+          (pred? (first xs)) (cons (first xs)
+                                   (filter pred? (rest xs)))
+          otherwise (filter pred? (rest xs)))))
 
 (def fold (\ (f accum xs)
     (if (nil? xs)
