@@ -9,10 +9,14 @@
 
 static struct {
     size_t live_objects;
+    size_t live_environments;
     Object *obj_list;
+    Env *env_list;
 } GC = {
     .live_objects = 0,
+    .live_environments = 0,
     .obj_list= NULL,
+    .env_list = NULL,
 };
 
 const char * const object_type_string[] = {
@@ -228,8 +232,7 @@ void object_free(Object *o)
     DBG("freeing object at %p", o);
     if (o->kind == O_STR || o->kind == O_IDENT || o->kind == O_ERROR) 
         free(o->str.ptr);
-    if (o->kind == O_FUNCTION) 
-        env_free(o->function.env);
+
     free(o);
 }
 
@@ -285,6 +288,25 @@ void object_print(Object *o)
     }
 }
 
+Env *env_new(Env *parent)
+{
+    Arena *arena = arena_new(sizeof(Env) + sizeof(EnvValueStore) * 10);
+    Env *ret = arena_alloc(arena, sizeof(Env));
+    *ret = (Env) {
+        .parent = parent,
+        .arena = arena,
+        .store = NULL,
+        .env_next = GC.env_list,
+        .gc_mark = NOT_MARKED,
+    };
+    GC.env_list = ret;
+    GC.live_environments++;
+
+    return ret;
+}
+
+static void _GC_mark_env(Env *e);
+
 static void _GC_mark_object(Object *o)
 {
     if (o == NULL) {
@@ -302,32 +324,14 @@ static void _GC_mark_object(Object *o)
     if (o->kind == O_FUNCTION) {
         _GC_mark_object(o->function.arguments);
         _GC_mark_object(o->function.body);
-    }
-}
-
-static void _GC_sweep(void)
-{
-    /* thank you baby's first garbage collector for showing me the proper way to do this
-     * https://journal.stuffwithstuff.com/2013/12/08/babys-first-garbage-collector/
-     * I originally did this wrong without the double ptr and paid the price in debuging time */
-    Object **o = &GC.obj_list;
-    while (*o) {
-        DBG("sweeping %p", o);
-        if ((*o)->gc_mark == NOT_MARKED) {
-            Object *unreachable = *o;
-            *o = unreachable->obj_next;
-            object_free(unreachable);
-            GC.live_objects--;
-        } else {
-            /* reset the object */
-            (*o)->gc_mark = NOT_MARKED; 
-            o = &(*o)->obj_next;
-        }
+        _GC_mark_env(o->function.env);
     }
 }
 
 static void _GC_mark_env(Env *e) 
 {
+    if (e->gc_mark == MARKED) return;
+    e->gc_mark = MARKED;
     EnvValueStore *cursor = e->store;
     while (cursor != NULL) {
         _GC_mark_object(cursor->ident);
@@ -336,6 +340,45 @@ static void _GC_mark_env(Env *e)
     }
 
     if (e->parent) _GC_mark_env(e->parent);
+}
+
+static void _GC_sweep(void)
+{
+    /* thank you baby's first garbage collector for showing me the proper way to do this
+     * https://journal.stuffwithstuff.com/2013/12/08/babys-first-garbage-collector/
+     * I originally did this wrong without the double ptr and paid the price in debuging time */
+    {
+        Object **o = &GC.obj_list;
+        while (*o) {
+            DBG("sweeping object %p", o);
+            if ((*o)->gc_mark == NOT_MARKED) {
+                Object *unreachable = *o;
+                *o = unreachable->obj_next;
+                object_free(unreachable);
+                GC.live_objects--;
+            } else {
+                /* reset the object */
+                (*o)->gc_mark = NOT_MARKED; 
+                o = &(*o)->obj_next;
+            }
+        }
+    }
+    {
+        Env **e = &GC.env_list;
+        while (*e) {
+            DBG("sweeping environment %p", e);
+            if ((*e)->gc_mark == NOT_MARKED) {
+                Env *unreachable = *e;
+                *e = unreachable->env_next;
+                env_free(unreachable);
+                GC.live_environments--;
+            } else {
+                (*e)->gc_mark = NOT_MARKED;
+                e = &(*e)->env_next;
+            }
+        }
+    }
+
 }
 
 void _GC_collect_garbage(Env *e, ...)
@@ -349,13 +392,17 @@ void _GC_collect_garbage(Env *e, ...)
         _GC_mark_object(to_mark);
 
     va_end(ap);
+
     _GC_sweep();
 }
 
 void GC_debug_print_status(void)
 {
     fprintf(stderr, "GC status:\n"
-            "\tlive objects: %zu\n",
-            GC.live_objects);
+            "\tlive objects: %zu\n"
+            "\tlive environments: %zu\n"
+            "\tobj_list: %p\n"
+            "\tenv_list: %p\n",
+            GC.live_objects, GC.live_environments, GC.obj_list, GC.env_list);
 }
 

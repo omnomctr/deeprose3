@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
 
             int status; 
             if ((status = eval_program(line, env, true)) != 0) {
-                env_free(env);
+                //env_free(env);
                 return status;
             }
             free(line);
@@ -45,13 +45,12 @@ int main(int argc, char *argv[])
 
 
         int status = eval_program(program, env, false);
-        env_free(env);
         GC_collect_garbage(NULL);
         free(program);
         return status;
     }
 
-    env_free(env);
+    GC_collect_garbage(NULL);
     return 0;
 }
 

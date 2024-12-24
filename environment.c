@@ -3,19 +3,8 @@
 #include "environment.h"
 #include "object.h"
 
-Env *env_new(Env *parent)
-{
-    Arena *arena = arena_new(sizeof(Env) + sizeof(EnvValueStore) * 10);
-    Env *ret = arena_alloc(arena, sizeof(Env));
-    *ret = (Env) {
-        .parent = parent,
-        .arena = arena,
-        .store = NULL,
-    };
-
-    return ret;
-}
-
+/* env_new() is is object.h because it needs to interact with
+ * static garbage collector state */
 
 void env_free(Env *e)
 {

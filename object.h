@@ -37,6 +37,8 @@ struct EnvValueStore {
 };
 typedef struct Env Env;
 struct Env {
+    Env *env_next; /* nullable - for gc */
+    Mark gc_mark;
     Env *parent; /* nullable */
     Arena *arena;
     EnvValueStore *store; /* nullable */

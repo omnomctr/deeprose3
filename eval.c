@@ -127,7 +127,6 @@ int eval_program(const char *program, Env *env /*nullable*/, bool print_eval)
     }
     
     if (free_env) {
-        env_free(env);
         GC_collect_garbage(NULL);
     } else {
         GC_collect_garbage(env);
@@ -330,9 +329,8 @@ static Object *_eval_sexpr(Env *e, Object *o)
         if (f->kind != O_FUNCTION) {
             return object_error_new("invalid function call, expected function got %sc", object_type_as_string(f->kind));
         }
-        assert(f->kind == O_FUNCTION);
         Env *env = env_new(f->function.env);
-
+        
         bool variadic = false;
         {
             Object *cursor = f->function.arguments;
@@ -368,7 +366,6 @@ static Object *_eval_sexpr(Env *e, Object *o)
         }
 
         Object *res = eval_expr(env, f->function.body);
-        env_free(env);
         return res;
     }
 }
@@ -408,11 +405,8 @@ static Object *_builtin_lambda(Env *e, Object *o)
 
     EASSERT(o->list.cdr->kind == O_LIST, "\\ needs two arguments");
     Object *body = o->list.cdr->list.car;
-    //EASSERT_TYPE("\\", body, O_LIST);
 
-    Env *f_env = env_new(e);
-
-    return object_function_new(f_env, arguments, body);
+    return object_function_new(e, arguments, body);
 }
 
 static Object *_builtin_if(Env *e, Object *o)
@@ -446,7 +440,7 @@ static Object *_builtin_equals(Env *e, Object *o)
                 break;
 
             case O_STR: case O_IDENT: case O_ERROR:
-                return memcmp(a->str.ptr, b->str.ptr, a->str.len) == 0 ? object_num_new(1) : object_nil_new();
+                return a->str.len == b->str.len && memcmp(a->str.ptr, b->str.ptr, a->str.len) == 0 ? object_num_new(1) : object_nil_new();
                 break;
 
             case O_LIST:
@@ -658,7 +652,6 @@ static Object *_builtin_let(Env *e, Object *o)
     while (vars->kind == O_LIST) {
         Object *ident = vars->list.car;
         if (ident->kind != O_IDENT) {
-            env_free(new_env);
             return object_error_new("let: exepected identifier in argslist, got %sc", object_type_as_string(ident->kind));
         }
         EASSERT(vars->list.cdr->kind == O_LIST, "let: needs an even number of variable declarations");
@@ -669,7 +662,6 @@ static Object *_builtin_let(Env *e, Object *o)
     }
 
     Object *ret = eval_expr(new_env, o->list.cdr->list.car);
-    env_free(new_env);
     return ret;
 }
 
