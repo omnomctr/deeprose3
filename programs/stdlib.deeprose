@@ -98,3 +98,7 @@
 
 (def apply (\ (f xs)
     (eval (cons f xs))))
+
+(def compose (\ (& fs)
+    (\ (x)
+      (fold (\ (f x) (f x)) x fs))))

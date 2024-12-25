@@ -237,19 +237,27 @@ static Object *_builtin_divide(Env *e, Object *o)
 
 static Object *_builtin_exit(Env *e, Object *o)
 {
-    EASSERT(o->kind == O_LIST, "exit requires arguments");
-    Object *exit_code_object = eval_expr(e, o->list.car);
-    EASSERT_TYPE("exit", exit_code_object, O_NUM);
-    exit(exit_code_object->num);
+    if (o->kind == O_NIL) {
+        GC_collect_garbage(NULL);
+        exit(0);
+    } else {
+
+        Object *exit_code_object = eval_expr(e, o->list.car);
+
+        EASSERT_TYPE("exit", exit_code_object, O_NUM);
+        int exit_code = (int)exit_code_object->num;
+        GC_collect_garbage(NULL);
+        exit(exit_code);
+    }
 }
 
 static Object *_builtin_cons(Env *e, Object *o)
 {
     EASSERT(o->kind == O_LIST, "cons needs two arguments");
     Object *car = eval_expr(e, o->list.car);
-    Object *next = o->list.cdr; 
-    EASSERT(next->kind == O_LIST, "cons needs two arguments");
-    Object *cdr = eval_expr(e, next->list.car);
+    EASSERT(o->list.cdr->kind == O_LIST, "cons needs two arguments");
+    Object *cdr = eval_expr(e, o->list.cdr->list.car);
+    EASSERT(o->list.cdr->list.cdr->kind == O_NIL, "too many arguments passed to cons");
     
     Object *ret = object_list_new(car, cdr);
     ret->eval = false;
@@ -259,6 +267,7 @@ static Object *_builtin_cons(Env *e, Object *o)
 static Object *_builtin_eval(Env *e, Object *o) 
 {
     EASSERT(o->kind == O_LIST, "eval requires an argument");
+    EASSERT(o->list.cdr->kind == O_NIL, "too many arguments passed to eval");
     Object *quoted_item = eval_expr(e, o->list.car);
     EASSERT(!quoted_item->eval, "eval: already evaluated");
     quoted_item->eval = true;
@@ -268,6 +277,7 @@ static Object *_builtin_eval(Env *e, Object *o)
 static Object *_builtin_first(Env *e, Object *o)
 {
     EASSERT(o->kind == O_LIST, "first requires an argument");
+    EASSERT(o->list.cdr->kind == O_NIL, "too many arguments passed to first");
     Object *arg1 = eval_expr(e, o->list.car);
     EASSERT_TYPE("first", arg1, O_LIST);
 
@@ -277,6 +287,7 @@ static Object *_builtin_first(Env *e, Object *o)
 static Object *_builtin_rest(Env *e, Object *o)
 {
     EASSERT(o->kind == O_LIST, "rest requires an argument");
+    EASSERT(o->list.cdr->kind == O_NIL, "too many arguments passed to rest");
     Object *arg1 = eval_expr(e, o->list.car);
     EASSERT_TYPE("rest", arg1, O_LIST);
 
@@ -285,12 +296,14 @@ static Object *_builtin_rest(Env *e, Object *o)
 
 static Object *_builtin_def(Env *e, Object *o)
 {
-    EASSERT(o->kind == O_LIST, "def requires an argument");
+    EASSERT(o->kind == O_LIST, "def requires two argument");
+    EASSERT(o->list.cdr->kind == O_LIST, "def requires two arguments");
+    EASSERT(o->list.cdr->list.cdr->kind == O_NIL, "too many arguments passed to def");
     EASSERT_TYPE("def", o->list.car, O_IDENT);
 
     Object *value = eval_expr(e, o->list.cdr->list.car);
     env_put(e, o->list.car, value);
-    return object_nil_new();
+    return object_list_new(o->list.car, object_list_new(value, object_nil_new()));
 }
 
 static Object *_eval_list_elements(Env *e, Object *o)
@@ -352,7 +365,7 @@ static Object *_eval_sexpr(Env *e, Object *o)
                     break;
                 }
                 if (args_cursor->kind == O_NIL) {
-                    return object_error_new("function passed too few values");
+                    return object_error_new("function %s passed too few values", o->list.car);
                 }
                 EASSERT(args_cursor->kind == O_LIST, "invalid function call form");
                 env_put(env, cursor->list.car, eval_expr(e, args_cursor->list.car));
@@ -379,6 +392,7 @@ static Object *_builtin_print_gc_status(Env *e, Object *o)
 static Object *_builtin_error(Env *e, Object *o)
 {
     EASSERT(o->kind == O_LIST, "error requires an argument");
+    EASSERT(o->list.cdr->kind == O_NIL, "too many arguments passed to error");
     Object *error = eval_expr(e, o->list.car);
     EASSERT_TYPE("error", error, O_STR);
     return object_error_new_from_string_slice(error);
@@ -386,7 +400,10 @@ static Object *_builtin_error(Env *e, Object *o)
 
 static Object *_builtin_lambda(Env *e, Object *o)
 {
-    EASSERT(o->kind == O_LIST, "\\ needs arguments");
+    EASSERT(o->kind == O_LIST, "\\ needs two arguments");
+    EASSERT(o->list.cdr->kind == O_LIST, "\\ needs two arguments");
+    EASSERT(o->list.cdr->list.cdr->kind == O_NIL, "too many arguments passed to \\");
+
     Object *arguments = o->list.car;
     if (arguments->kind != O_LIST && arguments->kind != O_NIL) {
         return object_error_new("\\: expected list, got %sc", object_type_as_string(arguments->kind));
@@ -403,7 +420,6 @@ static Object *_builtin_lambda(Env *e, Object *o)
         }
     }
 
-    EASSERT(o->list.cdr->kind == O_LIST, "\\ needs two arguments");
     Object *body = o->list.cdr->list.car;
 
     return object_function_new(e, arguments, body);
@@ -417,6 +433,7 @@ static Object *_builtin_if(Env *e, Object *o)
     Object *if_true = o->list.cdr->list.car;
     EASSERT(o->list.cdr->list.cdr->kind == O_LIST, "if requires 3 arguments");
     Object *if_false = o->list.cdr->list.cdr->list.car;
+    EASSERT(o->list.cdr->list.cdr->list.cdr->kind == O_NIL, "too many arguments passed to if");
 
     if (expr->kind == O_NIL) /* falsey value */ {
         return eval_expr(e, if_false);
@@ -431,6 +448,7 @@ static Object *_builtin_equals(Env *e, Object *o)
     Object *a = eval_expr(e, o->list.car);
     EASSERT(o->list.cdr->kind, "=: needs two arguments");
     Object *b = eval_expr(e, o->list.cdr->list.car);
+    EASSERT(o->list.cdr->list.cdr->kind == O_NIL, "too many arguments passed to =");
 
     if (a->kind != b->kind) return object_nil_new();
     else {
@@ -511,14 +529,18 @@ static void print(Object *o)
 static Object *_builtin_print(Env *e, Object *o)
 {
     EASSERT(o->kind == O_LIST, "print: needs an argument");
-    print(eval(e, o->list.car));
+    while (o->kind == O_LIST) {
+        print(eval(e, o->list.car));
+        o = o->list.cdr;
+    }
     return object_nil_new();
 }
 
 static Object *_builtin_println(Env *e, Object *o)
 {
-    if (o->kind != O_LIST) { putchar('\n'); return object_nil_new(); }
-    print(eval(e, o->list.car));
+    while (o->kind == O_LIST) {
+        print(eval(e, o->list.car));
+    }
     putchar('\n');
     return object_nil_new();
 }
@@ -548,6 +570,7 @@ static Object *_builtin_list(Env *e, Object *o)
             }
         }
 
+        ret->eval = false;
         return ret;
     }
 }
@@ -556,6 +579,7 @@ static Object *_builtin_mod(Env *e, Object *o)
 {
     EASSERT(o->kind == O_LIST, "mod: needs two arguments");
     EASSERT(o->list.cdr->kind == O_LIST, "mod: needs two arguments");
+    EASSERT(o->list.cdr->list.cdr->kind == O_NIL, "too many arguments passed to mod");
 
     Object *lhs = eval_expr(e, o->list.car);
     Object *rhs = eval_expr(e, o->list.cdr->list.car);
@@ -566,6 +590,7 @@ static Object *_builtin_mod(Env *e, Object *o)
 static Object *_builtin_not(Env *e, Object *o)
 {
     EASSERT(o->kind == O_LIST, "not: needs an argument");
+    EASSERT(o->list.cdr->kind == O_NIL, "too many arguments passed to not");
 
     Object *boolean = eval_expr(e, o->list.car);
     return boolean->kind == O_NIL ? object_num_new(1) : object_nil_new();
@@ -597,6 +622,7 @@ static Object *_builtin_lt(Env *e, Object *o)
 {
     EASSERT(o->kind == O_LIST, "<: needs two arguments");
     EASSERT(o->list.cdr->kind == O_LIST, "<: needs two arguments");
+    EASSERT(o->list.cdr->list.cdr->kind == O_NIL, "too many arguments passed to <");
 
     Object *lhs = eval_expr(e, o->list.car);
     EASSERT_TYPE("<", lhs, O_NUM);
@@ -610,6 +636,7 @@ static Object *_builtin_gt(Env *e, Object *o)
 {
     EASSERT(o->kind == O_LIST, ">: needs two arguments");
     EASSERT(o->list.cdr->kind == O_LIST, ">: needs two arguments");
+    EASSERT(o->list.cdr->list.cdr->kind == O_NIL, "too many arguments passed to >");
 
     Object *lhs = eval_expr(e, o->list.car);
     EASSERT_TYPE(">", lhs, O_NUM);
@@ -622,6 +649,8 @@ static Object *_builtin_gt(Env *e, Object *o)
 static Object *_builtin_load(Env *e, Object *o)
 {
     EASSERT(o->kind == O_LIST, "load: needs an argument");
+    EASSERT(o->list.cdr->kind == O_NIL, "too many arguments passed to load");
+
     Object *file_path = eval_expr(e, o->list.car);
     EASSERT_TYPE("load", file_path, O_STR);
 
