@@ -540,6 +540,7 @@ static Object *_builtin_println(Env *e, Object *o)
 {
     while (o->kind == O_LIST) {
         print(eval(e, o->list.car));
+        o = o->list.cdr;
     }
     putchar('\n');
     return object_nil_new();
