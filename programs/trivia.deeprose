@@ -1,0 +1,47 @@
+; structures / records are like scheme where they are implemented in user 
+; space using lists
+
+(def make-question (\ (question answer & choices)
+    (concat (list question answer) choices)))
+
+(def get-question-question (\ (question)
+    (first question)))
+
+(def get-question-answer (\ (question)
+    (first (rest question))))
+
+(def get-question-choices (\ (question)
+    (rest (rest question))))
+
+
+(def questions 
+     (list (make-question "whats 1 + 2?" "c" "a) 1" "b) 2" "c) 3")
+           (make-question "whats 8 + 5?" "b" "a) 10" "b) 13" "c) 15" "d) 12")))
+
+(def for-each (\ (f xs)
+    (if (nil? xs)
+        nil
+        (do (f (first xs))
+          (for-each f (rest xs))))))
+
+(def remove-current-question (\ (questions question)
+    (filter (\ (q) (not (= (get-question-question q) (get-question-question question)))) questions)))
+
+(def trivia-loop (\ (score questions)
+    (if (nil? questions)
+      (do (println "no more questions. score " score ".")
+          nil)
+      (let (q (nth (rand 1 (len questions)) questions))
+        (do (println "Question: " (get-question-question q) " choices:")
+            (for-each println (get-question-choices q))
+            (print "which do you choose? (a, b, c, etc) ")
+            (let (ans (input))
+              (if (= ans (get-question-answer q))
+                (do (println "you got it! score " (inc score) ".")
+                    (println "===")
+                    (trivia-loop (inc score) (remove-current-question questions q)))
+                (do (println "wrong. score " score ".")
+                    (println "===")
+                    (trivia-loop score (remove-current-question questions q))))))))))
+
+(trivia-loop 0 questions)
