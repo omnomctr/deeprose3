@@ -4,10 +4,12 @@
 #include <string.h>
 #include <setjmp.h>
 #include <stdio.h>
+#include <ctype.h>
 #include "eval.h"
+#include <time.h>
+#include "util.h"
 #include "lexer.h"
 #include "parser.h"
-#include "util.h"
 
 jmp_buf on_error_jmp_buf;
 Object *on_error_error = NULL;
@@ -53,6 +55,9 @@ static Object *_builtin_load(Env *e, Object *o);
 static Object *_builtin_let(Env *e, Object *o);
 static Object *_builtin_do(Env *e, Object *o);
 static Object *_builtin_cond(Env *e, Object *o);
+static Object *_builtin_input(Env *e, Object *o);
+static Object *_builtin_atoi(Env *e, Object *o);
+static Object *_builtin_rand(Env *e, Object *o);
 
 typedef struct { const char *name; Builtin func; } builtin_record;
 builtin_record builtins[] = {
@@ -84,6 +89,9 @@ builtin_record builtins[] = {
     { "let", _builtin_let },
     { "do", _builtin_do },
     { "cond", _builtin_cond },
+    { "input", _builtin_input },
+    { "str-to-num", _builtin_atoi },
+    { "rand", _builtin_rand },
 };
 
 void env_add_default_variables(Env *e) 
@@ -94,6 +102,7 @@ void env_add_default_variables(Env *e)
     }
     char nil_ident[] = "nil";
     env_put(e, object_ident_new(nil_ident, strlen(nil_ident)), object_nil_new());
+    srand(time(NULL)); /* set up for _builtin_rand */
 }
 
 int eval_program(const char *program, Env *env /*nullable*/, bool print_eval)
@@ -115,10 +124,11 @@ int eval_program(const char *program, Env *env /*nullable*/, bool print_eval)
         if (parser->error) printf("parser has error \"%s\"\n", parser_error_string(parser)); 
         else if (o == NULL) break;
         else {
-            if (print_eval) {
-                object_print(eval(env, o));
+            Object *evaled = eval(env, o);
+            if (print_eval || evaled->kind == O_ERROR) {
+                object_print(evaled);
                 putchar('\n');
-            } else eval(env, o);
+            };
         }
 
         if (parser_at_eof(parser)) break;
@@ -530,16 +540,17 @@ static Object *_builtin_print(Env *e, Object *o)
 {
     EASSERT(o->kind == O_LIST, "print: needs an argument");
     while (o->kind == O_LIST) {
-        print(eval(e, o->list.car));
+        print(eval_expr(e, o->list.car));
         o = o->list.cdr;
     }
+    fflush(stdout);
     return object_nil_new();
 }
 
 static Object *_builtin_println(Env *e, Object *o)
 {
     while (o->kind == O_LIST) {
-        print(eval(e, o->list.car));
+        print(eval_expr(e, o->list.car));
         o = o->list.cdr;
     }
     putchar('\n');
@@ -720,4 +731,65 @@ static Object *_builtin_cond(Env *e, Object *o)
     }
 
     return object_nil_new();
+}
+
+static Object *_builtin_input(Env *e, Object *o)
+{
+    EASSERT(o->kind == O_NIL, "too many arguments passed to input");
+
+    Object *ret = object_new_generic();
+    ret->kind = O_STR;
+    ret->str.capacity = 10;
+    ret->str.len = 0;
+    ret->str.ptr = malloc(sizeof(char) * ret->str.capacity);
+    CHECK_ALLOC(ret->str.ptr);
+
+    int ch;
+    while ((ch = getchar()) != '\n') {
+        if (ret->str.len >= ret->str.capacity) {
+            ret->str.capacity *= 2;
+            ret->str.ptr = realloc(ret->str.ptr, sizeof(char) * ret->str.capacity);
+            CHECK_ALLOC(ret->str.ptr);
+        }
+
+        ret->str.ptr[ret->str.len++] = (char)ch;
+    }
+
+    return ret;
+}
+
+static Object *_builtin_atoi(Env *e, Object *o)
+{
+    EASSERT(o->kind == O_LIST, "str-to-num: needs an argument");
+    Object *str = eval_expr(e, o->list.car);
+    EASSERT_TYPE("str-to-num", str, O_STR);
+    EASSERT(o->list.cdr->kind == O_NIL, "to many arguments passed to str-to-num");
+
+
+    int64_t num = 0;
+    bool is_negative_num = str->str.ptr[0] == '-';
+
+    for (size_t i = is_negative_num ? 1 : 0; i < str->str.len; i++) 
+        if (!isdigit(str->str.ptr[i])) return object_error_new("str-to-num: expected digit, got %c", str->str.ptr[i]);
+
+    for (size_t i = is_negative_num ? 1 : 0; i < str->str.len; i++) {
+        num *= 10;
+        num += (int64_t)str->str.ptr[i] - (int64_t)'0';
+    }
+    if (is_negative_num) num *= -1;
+
+    return object_num_new(num);
+}
+
+static Object *_builtin_rand(Env *e, Object *o)
+{
+    EASSERT(o->kind == O_LIST, "rand: needs two arguments");
+    Object *lower_bound = eval_expr(e, o->list.car);
+    EASSERT_TYPE("rand", lower_bound, O_NUM);
+    EASSERT(o->list.cdr->kind == O_LIST, "rand: needs two arguments");
+    Object *upper_bound = eval_expr(e, o->list.cdr->list.car);
+    EASSERT_TYPE("rand", upper_bound, O_NUM);
+    EASSERT(o->list.cdr->list.cdr->kind == O_NIL, "too many arguments passed to rand");
+
+    return object_num_new((rand() % (upper_bound->num - lower_bound->num + 1)) + lower_bound->num);
 }

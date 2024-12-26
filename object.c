@@ -108,14 +108,6 @@ Object *object_nil_new(void)
     return ret;
 }
 
-static inline void _resize_string_slice_if_needed(Object *o)
-{
-    if (o->str.len < o->str.capacity) return; 
-    o->str.capacity *= 2;
-    o->str.ptr = realloc(o->str.ptr, sizeof(char) * o->str.capacity);
-    CHECK_ALLOC(o->str.ptr);
-}
-
 Object *object_error_new(const char *fmt, ...)
 {
     Object *ret = object_new_generic();
@@ -181,6 +173,15 @@ Object *object_error_new(const char *fmt, ...)
                     memcpy(ret->str.ptr + ret->str.len, num_cstr, len);
                     ret->str.len += len;
                     free(num_cstr);
+                } break;
+                case 'c': {
+                    if (ret->str.len >= ret->str.capacity) {
+                        ret->str.capacity *= 2;
+                        ret->str.ptr = realloc(ret->str.ptr, sizeof(char) * ret->str.capacity);
+                        CHECK_ALLOC(ret->str.ptr);
+                    }
+                    int c = va_arg(ap, int);
+                    ret->str.ptr[ret->str.len++] = (char)c;
                 } break;
                 default: assert(0);
             } 
