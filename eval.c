@@ -428,6 +428,14 @@ static Object *_builtin_lambda(Env *e, Object *o)
             EASSERT_TYPE("\\", cursor, O_LIST);
             EASSERT_TYPE("\\", cursor->list.car, O_IDENT);
             EASSERT(cursor->list.car->eval, "\\: all arguments must be evaluated (did you add a quote somewhere?)");
+            char ampersand[] = "&";
+            if (cursor->list.car->str.len == strlen(ampersand) 
+                    && memcmp(cursor->list.car->str.ptr, ampersand, cursor->list.car->str.len) == 0) {
+                EASSERT(cursor->list.cdr->kind == O_LIST, "\\: missing argument after &");
+                EASSERT_TYPE("\\", cursor->list.cdr->list.car, O_IDENT);
+                EASSERT(cursor->list.cdr->list.cdr->kind == O_NIL, "\\: too many arguments after & (expected 1)");
+                break;
+            }
             cursor = cursor->list.cdr;
         }
     }
