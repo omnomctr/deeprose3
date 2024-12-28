@@ -4,6 +4,9 @@ CC = gcc
 
 all: $(BUILDDIR)/deeprose3
 
+install: $(BUILDDIR)/deeprose3
+	cp $(BUILDDIR)/deeprose3 /usr/bin/
+
 run:
 	@make all
 	rlwrap $(BUILDDIR)/deeprose3

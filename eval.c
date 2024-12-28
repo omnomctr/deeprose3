@@ -58,6 +58,7 @@ static Object *_builtin_cond(Env *e, Object *o);
 static Object *_builtin_input(Env *e, Object *o);
 static Object *_builtin_atoi(Env *e, Object *o);
 static Object *_builtin_rand(Env *e, Object *o);
+static Object *_builtin_ident(Env *e, Object *o);
 
 typedef struct { const char *name; Builtin func; } builtin_record;
 builtin_record builtins[] = {
@@ -92,6 +93,7 @@ builtin_record builtins[] = {
     { "input", _builtin_input },
     { "str-to-num", _builtin_atoi },
     { "rand", _builtin_rand },
+    { "ident", _builtin_ident },
 };
 
 void env_add_default_variables(Env *e) 
@@ -792,4 +794,17 @@ static Object *_builtin_rand(Env *e, Object *o)
     EASSERT(o->list.cdr->list.cdr->kind == O_NIL, "too many arguments passed to rand");
 
     return object_num_new((rand() % (upper_bound->num - lower_bound->num + 1)) + lower_bound->num);
+}
+
+static Object *_builtin_ident(Env *e, Object *o)
+{
+    EASSERT(o->kind == O_LIST, "ident: needs an argument");
+    EASSERT(o->list.cdr->kind == O_NIL, "too many arguments passed to ident");
+    
+    Object *ident = eval_expr(e, o->list.car);
+    EASSERT_TYPE("ident", ident, O_STR);
+    
+    Object *ret = object_ident_new(ident->str.ptr, ident->str.len);
+    ret->eval = false;
+    return ret;
 }

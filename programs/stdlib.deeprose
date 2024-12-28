@@ -102,3 +102,10 @@
 (def compose (\ (& fs)
     (\ (x)
       (fold (\ (f x) (f x)) x fs))))
+
+(def for-each (\ (f xs)
+    (if (nil? xs)
+        nil
+        (do (f (first xs))
+          (for-each f (rest xs))))))
+
