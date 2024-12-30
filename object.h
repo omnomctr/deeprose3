@@ -25,7 +25,7 @@ struct List {
 #define ERROR_NUM_MAX_STR_SIZE 256
 
 enum ObjectKind {
-    O_STR, O_NUM, O_LIST, O_IDENT, O_NIL, O_ERROR, O_BUILTIN, O_FUNCTION,
+    O_STR, O_NUM, O_LIST, O_IDENT, O_NIL, O_ERROR, O_BUILTIN, O_FUNCTION, O_CHAR,
 };
 
 
@@ -63,6 +63,7 @@ struct Object {
         struct List list;
         Builtin builtin;
         struct Function function;
+        char character;
    };
 };
 
@@ -77,6 +78,7 @@ const char *object_type_as_string(enum ObjectKind k);
 Object *object_error_new(const char *fmt, ...);
 Object *object_error_new_from_string_slice(Object *o);
 Object *object_function_new(Env *e, Object *args, Object *body);
+Object *object_char_new(char c);
 void object_print(Object *o);
 void object_free(Object *o);
 

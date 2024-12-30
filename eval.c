@@ -59,6 +59,8 @@ static Object *_builtin_input(Env *e, Object *o);
 static Object *_builtin_atoi(Env *e, Object *o);
 static Object *_builtin_rand(Env *e, Object *o);
 static Object *_builtin_ident(Env *e, Object *o);
+static Object *_builtin_charify(Env *e, Object *o);
+static Object *_builtin_stringify(Env *e, Object *o);
 
 typedef struct { const char *name; Builtin func; } builtin_record;
 builtin_record builtins[] = {
@@ -94,6 +96,8 @@ builtin_record builtins[] = {
     { "str-to-num", _builtin_atoi },
     { "rand", _builtin_rand },
     { "ident", _builtin_ident },
+    { "charify", _builtin_charify },
+    { "stringify", _builtin_stringify },
 };
 
 void env_add_default_variables(Env *e) 
@@ -152,7 +156,7 @@ Object *eval_expr(Env *e, Object *o)
 {
     if (!o->eval) return o;
     switch (o->kind) {
-        case O_STR: case O_NUM: case O_NIL: case O_ERROR: case O_BUILTIN: case O_FUNCTION:
+        case O_STR: case O_NUM: case O_NIL: case O_ERROR: case O_BUILTIN: case O_FUNCTION: case O_CHAR:
             return o;
 
         case O_IDENT:
@@ -492,6 +496,9 @@ static Object *_builtin_equals(Env *e, Object *o)
             case O_BUILTIN: case O_FUNCTION:
                 return object_error_new("=: function comparisons arent implemented :)");
                 break;
+
+            case O_CHAR:
+                return a->character == b->character ? object_num_new(1) : object_nil_new();
          }
     }
     assert(0 && "infallible");
@@ -542,6 +549,9 @@ static void print(Object *o)
                 print(o->function.arguments);
                 printf(" -> ");
                 print(o->function.body);
+                break;
+            case O_CHAR:
+                putchar(o->character);
                 break;
         }
 }
@@ -816,3 +826,62 @@ static Object *_builtin_ident(Env *e, Object *o)
     ret->eval = false;
     return ret;
 }
+
+static Object *_builtin_charify(Env *e, Object *o)
+{
+    EASSERT(o->kind == O_LIST, "charify: needs an argument");
+    EASSERT(o->list.cdr->kind == O_NIL, "too many arguments passed to charify");
+    Object *str = eval_expr(e, o->list.car);
+    EASSERT_TYPE("charify", str, O_STR);
+
+    Object *ret = object_new_generic();
+    Object *cursor = ret;
+    for (size_t i = 0; i < str->str.len; i++) {
+        cursor->kind = O_LIST;
+        cursor->list.car = object_char_new(str->str.ptr[i]);
+
+        if (i + 1 >= str->str.len) {
+            cursor->list.cdr = object_nil_new();
+        } else {
+            cursor->list.cdr = object_new_generic();
+            cursor = cursor->list.cdr;
+        }
+    }
+
+    return ret;
+}
+
+static Object *_builtin_stringify(Env *e, Object *o)
+{
+    EASSERT(o->kind == O_LIST, "stringify: needs an argument");
+    EASSERT(o->list.cdr->kind == O_NIL, "too many arguments passed to charify");
+    Object *chars = eval_expr(e, o->list.car);
+    if (chars->kind == O_NIL) return object_nil_new();
+    EASSERT_TYPE("stringify", chars, O_LIST);
+
+    /* figuring out the size to alloc + making sure all elements are chars */
+    size_t str_size = 0;
+    {
+       Object *cursor = chars;
+       while (cursor->kind == O_LIST) {
+           EASSERT(cursor->list.car->kind == O_CHAR, "stringify: list element wasn't a char");
+           str_size++;
+           cursor = cursor->list.cdr;
+       }
+    }
+
+    Object *ret = object_new_generic();
+    ret->kind = O_STR;
+    ret->str.len = ret->str.capacity = str_size;
+    ret->str.ptr = malloc(sizeof(char) * str_size);
+    CHECK_ALLOC(ret->str.ptr);
+
+    size_t i = 0;
+    while (chars->kind == O_LIST) {
+        ret->str.ptr[i++] = chars->list.car->character;
+        chars = chars->list.cdr;
+    }
+
+    return ret;
+}
+

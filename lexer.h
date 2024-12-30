@@ -24,6 +24,7 @@ enum TokenType {
     t_NUM,
     t_EOF,
     t_ILLEGAL,
+    t_CHAR,
 };
 
 typedef struct Token {
@@ -35,6 +36,7 @@ typedef struct Token {
             const char *ptr;
             size_t len;
         } string_slice;
+        char character;
    };
 } Token;
 

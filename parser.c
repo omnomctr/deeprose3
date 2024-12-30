@@ -55,6 +55,9 @@ static Object *_parser_parse_expr(Parser *p)
         case t_NUM: {
             ret = object_num_new(current_token->num);
         } break;
+        case t_CHAR: {
+            ret = object_char_new(current_token->character);
+        } break;
         case t_RPAREN: {
             p->error = PE_UNEXPECTED_RPAREN;
             ret = NULL;

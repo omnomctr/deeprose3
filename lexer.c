@@ -46,6 +46,11 @@ Token *lexer_next_token(Lexer *l)
         case '(': tok = _token_new(l, t_LPAREN); break;
         case ')': tok = _token_new(l, t_RPAREN); break;
         case '"': tok = _read_string(l); break;
+        case '~': {
+            _lexer_read_char(l);
+            tok = _token_new(l, t_CHAR);
+            tok->character = l->ch;
+        } break;
         default:
             /* I'm doing some weird stuff here to check for a unary minus ie -1 
              * double negatives become identifiers now */
@@ -90,6 +95,7 @@ void token_print(Token *t)
             printf("}");
             break;
         case t_NUM: printf("{number %ld}", t->num); break;
+        case t_CHAR: printf("{char %c}", t->character); break;
         case t_ILLEGAL: printf("{illegal token: line %zu}", t->line); break;
     }
 }

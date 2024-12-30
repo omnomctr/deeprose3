@@ -28,6 +28,7 @@ const char * const object_type_string[] = {
    [O_ERROR] = "error",
    [O_BUILTIN] = "builtin",
    [O_FUNCTION] = "function",
+   [O_CHAR] = "character",
 };
 
 const char *object_type_as_string(enum ObjectKind k)
@@ -228,6 +229,14 @@ Object *object_function_new(Env *e, Object *args, Object *body)
     return ret;
 }
 
+Object *object_char_new(char c)
+{
+    Object *ret = object_new_generic();
+    ret->kind = O_CHAR;
+    ret->character = c;
+    return ret;
+}
+
 void object_free(Object *o)
 {
     DBG("freeing object at %p", o);
@@ -285,6 +294,9 @@ void object_print(Object *o)
             object_print(o->function.arguments);
             printf(" -> ");
             object_print(o->function.body);
+            break;
+        case O_CHAR:
+            printf("~%c", o->character);
             break;
     }
 }
