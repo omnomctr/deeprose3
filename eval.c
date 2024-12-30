@@ -833,6 +833,7 @@ static Object *_builtin_charify(Env *e, Object *o)
     EASSERT(o->list.cdr->kind == O_NIL, "too many arguments passed to charify");
     Object *str = eval_expr(e, o->list.car);
     EASSERT_TYPE("charify", str, O_STR);
+    if (str->str.len == 0) return object_nil_new();
 
     Object *ret = object_new_generic();
     Object *cursor = ret;
