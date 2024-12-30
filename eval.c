@@ -108,6 +108,12 @@ void env_add_default_variables(Env *e)
     }
     char nil_ident[] = "nil";
     env_put(e, object_ident_new(nil_ident, strlen(nil_ident)), object_nil_new());
+    char newline_ident[] = "newline";
+    env_put(e, object_ident_new(newline_ident, strlen(newline_ident)), object_char_new('\n'));
+    char space_ident[] = "space";
+    env_put(e, object_ident_new(space_ident, strlen(space_ident)), object_char_new(' '));
+    char tab_ident[] = "tab";
+    env_put(e, object_ident_new(tab_ident, strlen(tab_ident)), object_char_new('\t'));
     srand(time(NULL)); /* set up for _builtin_rand */
 }
 

@@ -109,3 +109,16 @@
         (do (f (first xs))
           (for-each f (rest xs))))))
 
+(def reverse (\ (xs)
+    (if (nil? xs)
+        nil
+        (concat (reverse (rest xs))
+                (list (first xs))))))
+
+(def next (\ (xs)
+    (first (rest xs))))
+
+(def drop-until (\ (f xs)
+    (cond (nil? xs) nil
+          (f (first xs)) xs
+          otherwise (drop-until f (rest xs)))))

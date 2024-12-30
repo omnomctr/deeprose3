@@ -1,0 +1,65 @@
+; example lexer for the deeprose programming language
+; this program can technically lexically analyze itself. Pretty cool!
+
+(def whitespace (list newline space tab))
+
+(def digit? (\ (x)
+    (elem? x '(~1~2~3~4~5~6~7~8~9))))
+
+(def ident-letter? (\ (x)
+    (elem? x (charify "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ123456789?!<>=%^*+-/-\_&"))))
+
+(def tokenize (\ (chars)
+    (cond (nil? chars) (list 'EOF)
+          (= (first chars) ~() (cons 'LParen (tokenize (rest chars)))
+          (= (first chars) ~)) (cons 'RParen (tokenize (rest chars)))
+          (= (first chars) ~') (cons 'Quote (tokenize (rest chars)))
+          (= (first chars) ~") ; ~"
+            (let (read-string-out (read-string chars))
+              (cons (list 'Str (first read-string-out))
+                    (tokenize (next read-string-out))))
+          (= (first chars) ~~) 
+            (if (nil? (rest chars))
+                (error "expected char, got EOF")
+                (cons (list 'Char (next chars))
+                      (tokenize (rest (rest chars)))))
+          (= (first chars) ~;) (tokenize (drop-until (\ (c) (= c newline)) chars))
+          (elem? (first chars) whitespace) (tokenize (rest chars))
+          (digit? (first chars)) 
+            (let (read-number-out (read-number chars))
+              (cons (list 'Num (first read-number-out))
+                    (tokenize (next read-number-out))))
+          (ident-letter? (first chars))
+            (let (read-ident-out (read-ident chars))
+              (cons (list 'Ident (first read-ident-out))
+                    (tokenize (next read-ident-out))))
+          otherwise (list 'Illegal))))
+
+
+; [Chars] -> (Char -> Bool) -> (chars from read, rest)
+; we return a list w/ the chars read, then the rest of the unused chars. same with the read-string function
+(def read-pred (\ (chars pred?)
+    (let (read-pred^ (\ (in accum)
+                (cond (nil? in) (list (reverse accum) ())
+                      (pred? (first in)) (read-pred^ (rest in) (cons (first in) accum))
+                      otherwise (list (reverse accum) in))))
+      (read-pred^ chars ()))))
+
+(def read-number (\ (chars)
+    (read-pred chars digit?)))
+
+(def read-ident (\ (chars)
+    (read-pred chars ident-letter?)))
+
+(def read-string (\ (chars)
+    (let (read-string^ (\ (in accum)
+                (cond (nil? in) (error "unterminated string")
+                      (= (first in) ~") (list (reverse accum) (rest in)) ;"
+                      otherwise (read-string^ (rest in) (cons (first in) accum)))))
+      (read-string^ (rest chars) ()))))
+
+(def main (\ ()
+    (do (print "=> ")
+        (println (tokenize (charify (input))))
+        (main))))
+(main)
