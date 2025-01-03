@@ -279,6 +279,13 @@ static Object *_builtin_cons(Env *e, Object *o)
     Object *car = eval_expr(e, o->list.car);
     EASSERT(o->list.cdr->kind == O_LIST, "cons needs two arguments");
     Object *cdr = eval_expr(e, o->list.cdr->list.car);
+    /* Cons used to be able to take any argument for the cdr, leading to a pair like in
+     * scheme IE (a . b) 
+     * I have decided that the second argument of cons must be a list, mostly because
+     * no functions support the pair functionality, and I believe some of the builtins
+     * might have UB asociated with it. Its a neat feature, but fundamentally not usefull 
+     * + will most likely lead to footguns and bugs. */
+    EASSERT_TYPE("cons", cdr, O_LIST);
     EASSERT(o->list.cdr->list.cdr->kind == O_NIL, "too many arguments passed to cons");
     
     Object *ret = object_list_new(car, cdr);
@@ -356,7 +363,7 @@ static Object *_eval_sexpr(Env *e, Object *o)
     EASSERT(o->list.cdr->kind == O_LIST || o->list.cdr->kind == O_NIL, "invalid function call (did you try to run a pair (f . x) ?)");
 
 
-    o->list.car->eval = true;
+    /*o->list.car->eval = true; */
     Object *f = o->list.car->kind == O_FUNCTION ? o->list.car : eval_expr(e, o->list.car);
 
     if (f->kind == O_BUILTIN) return f->builtin(e, o->list.cdr);
