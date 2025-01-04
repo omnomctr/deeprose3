@@ -14,8 +14,8 @@
 jmp_buf on_error_jmp_buf;
 Object *on_error_error = NULL;
 
-#define EASSERT(expr, error) \
-    do { if (!(expr)) return object_error_new((error)); } while (0);
+#define EASSERT(expr, error, ...) \
+    do { if (!(expr)) return object_error_new((error) __VA_OPT__(,) __VA_ARGS__); } while (0);
 
 #define EASSERT_TYPE(f_name, obj, expected_type) \
     do { if ((obj)->kind != (expected_type)) { \
@@ -285,7 +285,7 @@ static Object *_builtin_cons(Env *e, Object *o)
      * no functions support the pair functionality, and I believe some of the builtins
      * might have UB asociated with it. Its a neat feature, but fundamentally not usefull 
      * + will most likely lead to footguns and bugs. */
-    EASSERT_TYPE("cons", cdr, O_LIST);
+    EASSERT(cdr->kind == O_LIST || cdr->kind == O_NIL, "cons: expected List or Nil, got %sc", object_type_as_string(cdr->kind));
     EASSERT(o->list.cdr->list.cdr->kind == O_NIL, "too many arguments passed to cons");
     
     Object *ret = object_list_new(car, cdr);
