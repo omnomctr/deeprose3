@@ -41,3 +41,13 @@
 (print "quicksort (5 6 3 2 3 4 6 7): ")
 (println (quicksort '(5 6 3 2 3 4 6 7))) ;=> (2 3 3 4 5 6 6 7)
 
+; stolen off of haskell
+; [n | n<-[2..], product [1..n-1] `rem` n == n-1]   -- Wilson's theorem
+; doesnt work past a certain point bc the product of [1..more than 13] is larger than the int64 max
+(def primes (\ (upper-bound)
+    (filter 
+      (\ (n) (= (dec n)
+                (mod (product (range 1 (dec n))) n)))
+      (range 2 upper-bound))))
+
+(println "primes less than 20: " (primes 20))
