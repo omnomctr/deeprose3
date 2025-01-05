@@ -299,8 +299,9 @@ static Object *_builtin_eval(Env *e, Object *o)
     EASSERT(o->list.cdr->kind == O_NIL, "too many arguments passed to eval");
     Object *quoted_item = eval_expr(e, o->list.car);
     EASSERT(!quoted_item->eval, "eval: already evaluated");
-    quoted_item->eval = true;
-    return eval_expr(e, quoted_item);
+    Object *to_eval = object_shallow_copy(quoted_item);
+    to_eval->eval = true;
+    return eval_expr(e, to_eval);
 }
 
 static Object *_builtin_first(Env *e, Object *o)

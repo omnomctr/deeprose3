@@ -79,6 +79,7 @@ Object *object_error_new(const char *fmt, ...);
 Object *object_error_new_from_string_slice(Object *o);
 Object *object_function_new(Env *e, Object *args, Object *body);
 Object *object_char_new(char c);
+Object *object_shallow_copy(Object *o);
 void object_print(Object *o);
 void object_free(Object *o);
 

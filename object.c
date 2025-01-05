@@ -237,6 +237,43 @@ Object *object_char_new(char c)
     return ret;
 }
 
+Object *object_shallow_copy(Object *o)
+{
+    Object *ret = object_new_generic();
+    ret->kind = o->kind;
+    ret->eval = o->eval;
+
+    switch (o->kind) {
+        case O_NUM: {
+            ret->num = o->num;
+        } break;
+        case O_STR: case O_IDENT: case O_ERROR: {
+            ret->str.len = ret->str.capacity = o->str.len;
+            ret->str.ptr = malloc(sizeof(char) * ret->str.capacity);
+            CHECK_ALLOC(ret->str.ptr);
+            memcpy(ret->str.ptr, o->str.ptr, ret->str.len);
+        } break;
+        case O_LIST: {
+            ret->list.car = o->list.car;
+            ret->list.cdr = o->list.cdr;
+        } break;
+        case O_NIL: break;
+        case O_BUILTIN: {
+            ret->builtin = o->builtin;
+        } break;
+        case O_CHAR: {
+            ret->character = o->character;
+        } break;
+        case O_FUNCTION: {
+            ret->function.arguments = o->function.arguments;
+            ret->function.body = o->function.body;
+            ret->function.env = o->function.env;
+        } break;
+    }
+
+    return ret;
+}
+
 void object_free(Object *o)
 {
     DBG("freeing object at %p", o);
