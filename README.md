@@ -24,3 +24,4 @@ grep -rn "TODO" *.[ch]
 ```
 * add dynamic loading with `dlopen`?
 * add namespaces maybe
+* support for long arithmetics / checked math
