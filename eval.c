@@ -633,6 +633,10 @@ static Object *_builtin_mod(Env *e, Object *o)
     Object *lhs = eval_expr(e, o->list.car);
     Object *rhs = eval_expr(e, o->list.cdr->list.car);
 
+    EASSERT_TYPE("mod", lhs, O_NUM);
+    EASSERT_TYPE("mod", rhs, O_NUM);
+    EASSERT(rhs->num != 0, "mod: integer modulo by zero");
+
     return object_num_new(lhs->num % rhs->num);
 }
 
