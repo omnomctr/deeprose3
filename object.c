@@ -102,6 +102,25 @@ Object *object_num_new(int64_t num)
     return ret;
 }
 
+Object *object_num_new_token(Token *t)
+{
+    Object *ret = object_new_generic();
+    ret->kind = O_NUM;
+        
+    assert(t->type == t_NUM);
+    char *str = malloc(sizeof(char) * (t->string_slice.len + 1));
+    CHECK_ALLOC(str);
+
+    memcpy(str, t->string_slice.ptr, t->string_slice.len);
+    str[t->string_slice.len] = '\0';
+
+    mpz_init(ret->num);
+    mpz_set_str(ret->num, str, 10);
+    free(str);
+
+    return ret;
+}
+
 Object *object_nil_new(void)
 {
     Object *ret = object_new_generic();

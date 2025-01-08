@@ -7,7 +7,7 @@ has a garbage collector, lists as first class citizens, higher order functions a
 
 # install
 
-**dependencies**: gcc, make, rlwrap
+**dependencies**: gcc, make, GMP, rlwrap
 
 ```sh
 $ git clone https://github.com/omnomctr/deeprose3

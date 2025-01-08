@@ -31,7 +31,6 @@ typedef struct Token {
     size_t line; /* line number */
     enum TokenType type;
     union {
-        int64_t num;
         struct {
             const char *ptr;
             size_t len;

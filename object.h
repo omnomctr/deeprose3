@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include "lexer.h"
 #include <gmp.h>
 #include "arena.h"
 
@@ -73,6 +74,7 @@ Object *object_list_new(Object *car, Object *cdr);
 Object *object_string_slice_new(const char *s, size_t len);
 Object *object_ident_new(const char *s, size_t len);
 Object *object_num_new(int64_t num);
+Object *object_num_new_token(Token *t);
 Object *object_nil_new(void);
 Object *object_builtin_new(Builtin f);
 const char *object_type_as_string(enum ObjectKind k);
