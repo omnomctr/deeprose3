@@ -96,9 +96,28 @@ Object *object_num_new(int64_t num)
 {
     Object *ret = object_new_generic();
     ret->kind = O_NUM;
-    ret->list.car = NULL;
-    ret->list.cdr = NULL;
-    ret->num = num;
+    mpz_init(ret->num);
+    _Static_assert(sizeof(int64_t) == sizeof(signed long int), "");
+    mpz_set_si(ret->num, num);
+    return ret;
+}
+
+Object *object_num_new_token(Token *t)
+{
+    Object *ret = object_new_generic();
+    ret->kind = O_NUM;
+        
+    assert(t->type == t_NUM);
+    char *str = malloc(sizeof(char) * (t->string_slice.len + 1));
+    CHECK_ALLOC(str);
+
+    memcpy(str, t->string_slice.ptr, t->string_slice.len);
+    str[t->string_slice.len] = '\0';
+
+    mpz_init(ret->num);
+    mpz_set_str(ret->num, str, 10);
+    free(str);
+
     return ret;
 }
 
@@ -161,9 +180,7 @@ Object *object_error_new(const char *fmt, ...)
                 case 'd': {
                     Object *num = va_arg(ap, Object *);
                     assert(num->kind == O_NUM);
-                    char *num_cstr = malloc(sizeof(char) * ERROR_NUM_MAX_STR_SIZE);
-                    CHECK_ALLOC(num_cstr);
-                    snprintf(num_cstr, ERROR_NUM_MAX_STR_SIZE, "%ld", num->num);
+                    char *num_cstr = mpz_get_str(NULL, 10, num->num);
                     size_t len = strlen(num_cstr);
 
                     if (ret->str.len + len >= ret->str.capacity) {
@@ -245,7 +262,8 @@ Object *object_shallow_copy(Object *o)
 
     switch (o->kind) {
         case O_NUM: {
-            ret->num = o->num;
+            mpz_init(ret->num);
+            mpz_set(ret->num, o->num);
         } break;
         case O_STR: case O_IDENT: case O_ERROR: {
             ret->str.len = ret->str.capacity = o->str.len;
@@ -280,6 +298,9 @@ void object_free(Object *o)
     if (o->kind == O_STR || o->kind == O_IDENT || o->kind == O_ERROR) 
         free(o->str.ptr);
 
+    if (o->kind == O_NUM) 
+        mpz_clear(o->num);
+
     free(o);
 }
 
@@ -298,9 +319,11 @@ void object_print(Object *o)
             _print_slice(o->str);
             putchar('"');
             break;
-        case O_NUM:
-            printf("%ld", o->num);
-            break;
+        case O_NUM: {
+            char *s = mpz_get_str(NULL, 10, o->num);
+            printf("%s", s);
+            free(s);
+        } break;
         case O_IDENT:
             _print_slice(o->str);
             break;

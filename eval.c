@@ -8,12 +8,15 @@
 #include "eval.h"
 #include <time.h>
 #include <stdckdint.h>
+#include <gmp.h>
 #include "util.h"
 #include "lexer.h"
 #include "parser.h"
 
 jmp_buf on_error_jmp_buf;
 Object *on_error_error = NULL;
+
+gmp_randstate_t randstate;
 
 #define EASSERT(expr, error, ...) \
     do { if (!(expr)) return object_error_new((error) __VA_OPT__(,) __VA_ARGS__); } while (0);
@@ -115,7 +118,7 @@ void env_add_default_variables(Env *e)
     env_put(e, object_ident_new(space_ident, strlen(space_ident)), object_char_new(' '));
     char tab_ident[] = "tab";
     env_put(e, object_ident_new(tab_ident, strlen(tab_ident)), object_char_new('\t'));
-    srand(time(NULL)); /* set up for _builtin_rand */
+    gmp_randinit_default(randstate);
 }
 
 int eval_program(const char *program, Env *env /*nullable*/, bool print_eval)
@@ -195,14 +198,16 @@ _Noreturn void report_error(Object *o)
 static Object *_builtin_add(Env *e, Object *o)
 {
     EASSERT(o->kind == O_LIST, "+ requires arguments");
-    int64_t num = 0;
+    Object *num = object_num_new(0);
+
     while (o->kind == O_LIST) {
         Object *to_add = eval_expr(e, o->list.car);
         EASSERT_TYPE("+", to_add, O_NUM);
-        EASSERT(!ckd_add(&num, num, to_add->num), "+: integer overflow");
+        mpz_add(num->num, num->num, to_add->num);
+
         o = o->list.cdr;
     }
-    return object_num_new(num);
+    return num;
 }
 
 static Object *_builtin_subtract(Env *e, Object *o)
@@ -210,35 +215,36 @@ static Object *_builtin_subtract(Env *e, Object *o)
     EASSERT(o->kind == O_LIST, "- requires arguments");
     Object *lhs_object = eval_expr(e, o->list.car);
     EASSERT_TYPE("-", lhs_object, O_NUM);
-    int64_t lhs = lhs_object->num;
+    Object *lhs = object_shallow_copy(lhs_object);
     o = o->list.cdr;
     if (o->kind != O_LIST) /* unary minus */
-        lhs *= -1;
+        mpz_neg(lhs->num, lhs->num);
 
     while (o->kind == O_LIST) {
         Object *rhs = eval_expr(e, o->list.car);
         EASSERT_TYPE("-", rhs, O_NUM);
-        EASSERT(!ckd_sub(&lhs, lhs, rhs->num), "-: integer underflow");
+        mpz_sub(lhs->num, lhs->num, rhs->num);
 
         o = o->list.cdr;
     }
 
-    return object_num_new(lhs);
+    return lhs;
 }
 
 static Object *_builtin_multiply(Env *e, Object *o) 
 {
     EASSERT(o->kind == O_LIST, "* requires arguments");
-    int64_t num = 1;
+    Object *num = object_num_new(1);
+
 
     while (o->kind == O_LIST) {
         Object *to_mult = eval_expr(e, o->list.car);
         EASSERT_TYPE("*", to_mult, O_NUM);
-        EASSERT(!ckd_mul(&num, num, to_mult->num), "*: integer overflow");
+        mpz_mul(num->num, num->num, to_mult->num);
         o = o->list.cdr;
     }
 
-    return object_num_new(num);
+    return num;
 }
 
 static Object *_builtin_divide(Env *e, Object *o) 
@@ -246,18 +252,20 @@ static Object *_builtin_divide(Env *e, Object *o)
     EASSERT(o->kind == O_LIST, "/ requires arguments");
     Object *lhs_object = eval_expr(e, o->list.car);
     EASSERT_TYPE("/", lhs_object, O_NUM);
-    int64_t lhs = lhs_object->num;
+
+    Object *lhs = object_shallow_copy(lhs_object);
     o = o->list.cdr;
 
     while (o->kind == O_LIST) {
         Object *rhs = eval_expr(e, o->list.car);
         EASSERT_TYPE("/", rhs, O_NUM);
-        EASSERT(rhs->num != 0, "/: divide by zero");
-        lhs /= rhs->num;
+        EASSERT(mpz_cmp_si(rhs->num, 0), "/: divide by zero");
+
+        mpz_cdiv_q(lhs->num, lhs->num, rhs->num);
         o = o->list.cdr;
     }
 
-    return object_num_new(lhs);
+    return lhs;
 }
 
 static Object *_builtin_exit(Env *e, Object *o)
@@ -270,7 +278,7 @@ static Object *_builtin_exit(Env *e, Object *o)
         Object *exit_code_object = eval_expr(e, o->list.car);
 
         EASSERT_TYPE("exit", exit_code_object, O_NUM);
-        int exit_code = (int)exit_code_object->num;
+        int exit_code = (int)mpz_get_si(exit_code_object->num);
         GC_collect_garbage(NULL);
         exit(exit_code);
     }
@@ -495,7 +503,7 @@ static Object *_builtin_equals(Env *e, Object *o)
     else {
         switch (a->kind) {
             case O_NUM:
-                return a->num == b->num ? object_num_new(1) : object_nil_new();
+                return mpz_cmp(a->num, b->num) == 0 ? object_num_new(1) : object_nil_new();
                 break;
 
             case O_STR: case O_IDENT: case O_ERROR:
@@ -534,9 +542,11 @@ static void print(Object *o)
             case O_STR:
                 _print_slice(o->str);
                 break;
-            case O_NUM:
-                printf("%ld", o->num);
-                break;
+            case O_NUM: {
+                char *s = mpz_get_str(NULL, 10, o->num);
+                printf("%s", s);
+                free(s);
+            } break;
             case O_IDENT:
                 _print_slice(o->str);
                 break;
@@ -635,9 +645,11 @@ static Object *_builtin_mod(Env *e, Object *o)
 
     EASSERT_TYPE("mod", lhs, O_NUM);
     EASSERT_TYPE("mod", rhs, O_NUM);
-    EASSERT(rhs->num != 0, "mod: integer modulo by zero");
-
-    return object_num_new(lhs->num % rhs->num);
+    EASSERT(mpz_cmp_si(rhs->num, 0) != 0, "mod: integer modulo by zero");
+    
+    Object *r = object_num_new(0);
+    mpz_mod(r->num, lhs->num, rhs->num);
+    return r;
 }
 
 static Object *_builtin_not(Env *e, Object *o)
@@ -682,7 +694,7 @@ static Object *_builtin_lt(Env *e, Object *o)
     Object *rhs = eval_expr(e, o->list.cdr->list.car);
     EASSERT_TYPE("<", rhs, O_NUM);
 
-    return  lhs->num < rhs->num ? object_num_new(1) : object_nil_new();
+    return  mpz_cmp(lhs->num, rhs->num) < 0 ? object_num_new(1) : object_nil_new();
 }
 
 static Object *_builtin_gt(Env *e, Object *o)
@@ -696,7 +708,7 @@ static Object *_builtin_gt(Env *e, Object *o)
     Object *rhs = eval_expr(e, o->list.cdr->list.car);
     EASSERT_TYPE(">", rhs, O_NUM);
 
-    return  lhs->num > rhs->num ? object_num_new(1) : object_nil_new();
+    return  mpz_cmp(lhs->num, rhs->num) > 0 ? object_num_new(1) : object_nil_new();
 }
 
 static Object *_builtin_load(Env *e, Object *o)
@@ -832,7 +844,32 @@ static Object *_builtin_rand(Env *e, Object *o)
     EASSERT_TYPE("rand", upper_bound, O_NUM);
     EASSERT(o->list.cdr->list.cdr->kind == O_NIL, "too many arguments passed to rand");
 
-    return object_num_new((rand() % (upper_bound->num - lower_bound->num + 1)) + lower_bound->num);
+    /* x..=y
+     * 0..=y
+     * (0..(y-x+1))+ x 
+     */
+
+    mpz_t upper_bound_adjusted;
+    mpz_init(upper_bound_adjusted);
+
+    mpz_sub(upper_bound_adjusted, upper_bound->num, lower_bound->num);
+    mpz_add_ui(upper_bound_adjusted, upper_bound_adjusted, 1);
+
+    if (mpz_cmp_si(upper_bound_adjusted, 0) <= 0) {
+        mpz_clear(upper_bound_adjusted);
+        return object_error_new("rand: lower bound is equal or heigher than upper bound");
+    }
+
+    mpz_t res;
+    mpz_init(res);
+    mpz_urandomm(res, randstate, upper_bound_adjusted);
+
+    Object *ret = object_num_new(0);
+    mpz_add(ret->num, res, lower_bound->num);
+    mpz_clear(upper_bound_adjusted);
+    mpz_clear(res);
+
+    return ret;
 }
 
 static Object *_builtin_ident(Env *e, Object *o)

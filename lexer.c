@@ -52,9 +52,7 @@ Token *lexer_next_token(Lexer *l)
             tok->character = l->ch;
         } break;
         default:
-            /* I'm doing some weird stuff here to check for a unary minus ie -1 
-             * double negatives become identifiers now */
-            if (isdigit(l->ch) || (l->ch == '-' && isdigit(l->str[l->pos + 1]))) {
+            if (isdigit(l->ch)) {
                 tok = _read_number(l);
                 return tok;
                 break;
@@ -94,7 +92,11 @@ void token_print(Token *t)
             _print_token_string_slice(t);
             printf("}");
             break;
-        case t_NUM: printf("{number %ld}", t->num); break;
+        case t_NUM: 
+            printf("{number "); 
+            _print_token_string_slice(t);
+            printf("}");
+            break;
         case t_CHAR: printf("{char %c}", t->character); break;
         case t_ILLEGAL: printf("{illegal token: line %zu}", t->line); break;
     }
@@ -156,32 +158,8 @@ static Token *_read_identifier(Lexer *l)
 static bool _is_digit(char c) { return isdigit(c); }
 static Token *_read_number(Lexer *l)
 {
-    _lexer_read_char(l);
-    Token *t = _lexer_read(l, t_NUM, _is_digit);
-    
-    /* hacky thing I did here - basically if the number is negative than 
-     * the _is_digit predicate will be wrong for the first digit (the negative).
-     * I decided to have a special case at the start for the negative that you
-     * can see in the lexer_next_token function, but we have to read a char and then
-     * decrement the slice ptr, increment the slice length for everything to work. */
-
-    t->string_slice.ptr--;
-    t->string_slice.len++;
-
-    /* TODO: support double negative ie. --1. in python that would give you positive 1, 
-     * here it gives you a 0 token, and then the positive number token */
-    int64_t num = 0;
-    bool is_negative_num = t->string_slice.ptr[0] == '-';
-    for (size_t i = is_negative_num ? 1 : 0; i < t->string_slice.len; i++) {
-        num *= 10;
-        num += (int64_t)t->string_slice.ptr[i] - (int64_t)'0';
-    }
-    if (is_negative_num) num *= -1;
-
-    /* overwrite the stringslice struct */
-    t->num = num;
-
-    return t;
+    /* number tokens now return strings so they can be converted to mpz_ts later on */
+    return _lexer_read(l, t_NUM, _is_digit);
 }
 
 static Token* _lexer_read(Lexer *l, enum TokenType type, bool(*pred)(char)) 
