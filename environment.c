@@ -1,5 +1,7 @@
 #include <string.h>
 #include <assert.h>
+#include <stdlib.h>
+#include "util.h"
 #include "environment.h"
 #include "object.h"
 
@@ -8,7 +10,13 @@
 
 void env_free(Env *e)
 {
-    arena_destroy(e->arena);
+    EnvValueStore *cursor = e->store;
+    while (cursor != NULL) {
+        EnvValueStore *to_free = cursor;
+        cursor = cursor->next;
+        free(to_free);
+    }
+    free(e);
 }
 
 void env_put(Env *e, Object *ident, Object *value)
@@ -26,7 +34,8 @@ void env_put(Env *e, Object *ident, Object *value)
     }
     
     assert(*cursor == NULL);
-    *cursor = arena_alloc(e->arena, sizeof(EnvValueStore));
+    *cursor = malloc(sizeof(EnvValueStore));
+    CHECK_ALLOC(*cursor);
     **cursor = (struct EnvValueStore) {
         .ident = ident,
         .value = value,
