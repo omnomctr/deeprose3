@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <gmp.h>
 #include "arena.h"
 
 typedef enum { MARKED, NOT_MARKED } Mark;
@@ -59,7 +60,7 @@ struct Object {
     bool eval;
     union {
         struct StringSlice str;
-        int64_t num;
+        mpz_t num;
         struct List list;
         Builtin builtin;
         struct Function function;
