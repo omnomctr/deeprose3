@@ -7,6 +7,7 @@
 #include <ctype.h>
 #include "eval.h"
 #include <time.h>
+#include <stdckdint.h>
 #include "util.h"
 #include "lexer.h"
 #include "parser.h"
@@ -198,7 +199,7 @@ static Object *_builtin_add(Env *e, Object *o)
     while (o->kind == O_LIST) {
         Object *to_add = eval_expr(e, o->list.car);
         EASSERT_TYPE("+", to_add, O_NUM);
-        num += to_add->num;
+        EASSERT(!ckd_add(&num, num, to_add->num), "+: integer overflow");
         o = o->list.cdr;
     }
     return object_num_new(num);
@@ -217,7 +218,8 @@ static Object *_builtin_subtract(Env *e, Object *o)
     while (o->kind == O_LIST) {
         Object *rhs = eval_expr(e, o->list.car);
         EASSERT_TYPE("-", rhs, O_NUM);
-        lhs -= rhs->num;
+        EASSERT(!ckd_sub(&lhs, lhs, rhs->num), "-: integer underflow");
+
         o = o->list.cdr;
     }
 
@@ -232,7 +234,7 @@ static Object *_builtin_multiply(Env *e, Object *o)
     while (o->kind == O_LIST) {
         Object *to_mult = eval_expr(e, o->list.car);
         EASSERT_TYPE("*", to_mult, O_NUM);
-        num *= to_mult->num;
+        EASSERT(!ckd_mul(&num, num, to_mult->num), "*: integer overflow");
         o = o->list.cdr;
     }
 
@@ -250,6 +252,7 @@ static Object *_builtin_divide(Env *e, Object *o)
     while (o->kind == O_LIST) {
         Object *rhs = eval_expr(e, o->list.car);
         EASSERT_TYPE("/", rhs, O_NUM);
+        EASSERT(rhs->num != 0, "/: divide by zero");
         lhs /= rhs->num;
         o = o->list.cdr;
     }
