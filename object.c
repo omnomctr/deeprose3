@@ -320,9 +320,7 @@ void object_print(Object *o)
             putchar('"');
             break;
         case O_NUM: {
-            char *s = mpz_get_str(NULL, 10, o->num);
-            printf("%s", s);
-            free(s);
+            mpz_out_str(stdout, 10, o->num);
         } break;
         case O_IDENT:
             _print_slice(o->str);

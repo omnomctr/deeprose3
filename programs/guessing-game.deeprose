@@ -1,6 +1,20 @@
+(def whitespace? (\ (c) (elem? c (list newline tab space))))
+(def trim 
+    (let (trim-start (\ (chars)
+            (cond 
+              (nil? chars) nil
+              (whitespace? (first chars)) (trim-start (rest chars))
+              otherwise chars))
+          trim-end (\ (chars)
+            (cond
+              (nil? chars) nil
+              (whitespace? (first chars)) nil
+              otherwise (cons (first chars) (trim-end (rest chars))))))
+      (compose stringify trim-end trim-start charify)))
+
 (def guessing-game (\ (answer)
     (do (print "guess a number... ")
-        (let (guess (str-to-num (input)))
+        (let (guess (str-to-num (trim (input))))
           (cond (= guess answer) (println "you got it! go you")
                 (> guess answer) (do (println "your guess is higher than the answer. try again :)")
                                      (guessing-game answer))

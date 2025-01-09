@@ -375,8 +375,21 @@ static Object *_eval_sexpr(Env *e, Object *o)
     EASSERT(o->list.cdr->kind == O_LIST || o->list.cdr->kind == O_NIL, "invalid function call (did you try to run a pair (f . x) ?)");
 
 
-    /*o->list.car->eval = true; */
-    Object *f = o->list.car->kind == O_FUNCTION ? o->list.car : eval_expr(e, o->list.car);
+    //Object *f = o->list.car->kind == O_FUNCTION ? o->list.car : eval_expr(e, o->list.car);
+
+    Object *f = NULL;
+    if (o->list.car->kind == O_FUNCTION)
+        f = o->list.car;
+    else if (o->list.car->kind == O_IDENT && !o->list.car->eval) {
+        /* force evaluation of identifiers in function calls like clojure or scheme
+         * so this code should work:
+         * (eval (cons '+ '(1 2 3))) => 6 */
+        Object *to_eval = object_shallow_copy(o->list.car);
+        to_eval->eval = true;
+        f = eval_expr(e, to_eval);
+    } else {
+        f = eval_expr(e, o->list.car);
+    }
 
     if (f->kind == O_BUILTIN) return f->builtin(e, o->list.cdr);
     else {
@@ -543,9 +556,7 @@ static void print(Object *o)
                 _print_slice(o->str);
                 break;
             case O_NUM: {
-                char *s = mpz_get_str(NULL, 10, o->num);
-                printf("%s", s);
-                free(s);
+                mpz_out_str(stdout, 10, o->num);
             } break;
             case O_IDENT:
                 _print_slice(o->str);
@@ -823,7 +834,7 @@ static Object *_builtin_atoi(Env *e, Object *o)
     bool is_negative_num = str->str.ptr[0] == '-';
 
     for (size_t i = is_negative_num ? 1 : 0; i < str->str.len; i++) 
-        if (!isdigit(str->str.ptr[i])) return object_error_new("str-to-num: expected digit, got %c", str->str.ptr[i]);
+        if (!isdigit(str->str.ptr[i])) return object_error_new("str-to-num: expected digit, got '%c'", str->str.ptr[i]);
 
     for (size_t i = is_negative_num ? 1 : 0; i < str->str.len; i++) {
         num *= 10;
