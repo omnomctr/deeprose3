@@ -5,6 +5,17 @@ You can see builtin functions / macros in eval.c's builtins[].
 
 has a garbage collector, lists as first class citizens, higher order functions and extensibility with the c programming language
 
+```lisp
+(def quicksort (\ (xs)
+    (if (nil? xs) 
+        (list)
+        (let (x (first xs)
+              xs (rest xs))
+          (concat (quicksort (filter (\ (n) (< n x)) xs))
+                  (list x)
+                  (quicksort (filter (\ (n) (>= n x)) xs)))))))
+```
+
 # install
 
 **dependencies**: gcc, make, GMP, rlwrap
@@ -15,6 +26,7 @@ $ git clone https://github.com/omnomctr/deeprose3
 $ cd deeprose3
 $ make # to compile, find the binary in .build/
 $ make run # compile and run rlwrap deeprose3 
+$ sudo make install # install to /usr/bin
 ```
 
 # TODO

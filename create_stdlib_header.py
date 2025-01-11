@@ -20,6 +20,7 @@ const char * const stdlib = {"''')
             break
 
         if char == '\n':
+            out.write('\\n')
             continue;
         elif char == '\\' or char == '"' or char == "'":
             out.write('\\')

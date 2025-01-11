@@ -1,3 +1,7 @@
+; the deeprose standard library
+; Automatically ran at deeprose startup, meaning
+; any deeprose program may use any of these functions
+
 (def true 1)
 (def false '())
 (def otherwise true)
@@ -25,10 +29,15 @@
                                    (filter pred? (rest xs)))
           otherwise (filter pred? (rest xs)))))
 
-(def fold (\ (f accum xs)
+(def foldr (\ (f accum xs)
     (if (nil? xs)
         accum
-        (f (first xs) (fold f accum (rest xs))))))
+        (f (first xs) (foldr f accum (rest xs))))))
+
+(def foldl (\ (f accum xs)
+    (if (nil? xs)
+        accum 
+        (foldl f (f (first xs) accum) (rest xs)))))
 
 (def zip-with (\ (f xs ys)
     (if (or (nil? xs) (nil? ys))
@@ -42,8 +51,8 @@
 (def even? (\ (n) (= (mod n 2) 0)))
 (def odd? (\ (n) (not (even? n))))
 
-(def sum (\ (xs) (fold + 0 xs)))
-(def product (\ (xs) (fold * 1 xs)))
+(def sum (\ (xs) (apply + xs)))
+(def product (\ (xs) (apply * xs)))
 
 (def <= (\ (a b)
     (or (< a b)
@@ -58,7 +67,7 @@
       (+ 1 (len (rest xs))))))
 
 (def elem? (\ (a xs)
-    (fold (\ (x accum) (or accum (= a x))) false xs)))
+    (foldr (\ (x accum) (or accum (= a x))) false xs)))
 
 (def take (\ (n xs)
     (if (= n 0)
@@ -83,26 +92,26 @@
 (def max (\ (x & xs)
     (let (max^ (\ (a b)
                  (if (> a b) a b)))
-      (fold max^ x xs))))
+      (foldr max^ x xs))))
 
 (def min (\ (x & xs)
     (let (min^ (\ (a b)
                  (if (< a b) a b)))
-      (fold min^ x xs))))
+      (foldr min^ x xs))))
 
 (def concat (\ (& xs)
     (let (concat^ (\ (xs ys)
                     (if (nil? xs) 
                         ys
                         (cons (first xs) (concat^ (rest xs) ys)))))
-      (fold concat^ nil xs))))
+      (foldr concat^ nil xs))))
 
 (def apply (\ (f xs)
     (eval (cons f xs))))
 
 (def compose (\ (& fs)
     (\ (x)
-      (fold (\ (f x) (f x)) x fs))))
+      (foldr (\ (f x) (f x)) x fs))))
 
 (def for-each (\ (f xs)
     (if (nil? xs)
@@ -123,3 +132,6 @@
     (cond (nil? xs) nil
           (f (first xs)) xs
           otherwise (drop-until f (rest xs)))))
+
+(def -> (\ (x & fs)
+    (foldl (\ (f x) (f x)) x fs)))
