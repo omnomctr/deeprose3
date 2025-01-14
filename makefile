@@ -17,7 +17,7 @@ $(BUILDDIR)/%.o: %.c %.h
 	mv *.o $(BUILDDIR)/
 	mv *.h.gch $(BUILDDIR)/
 
-$(BUILDDIR)/stdlib.h: programs/stdlib.deeprose
+$(BUILDDIR)/stdlib.h: programs/stdlib.deeprose create_stdlib_header.py
 	python3 create_stdlib_header.py $(BUILDDIR)
 
 $(BUILDDIR)/deeprose3: $(BUILDDIR)/lexer.o $(BUILDDIR)/arena.o $(BUILDDIR)/object.o $(BUILDDIR)/parser.o $(BUILDDIR)/eval.o $(BUILDDIR)/environment.o $(BUILDDIR)/stdlib.h $(BUILDDIR)/util.o main.c

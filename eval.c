@@ -1,4 +1,3 @@
-#include <sys/param.h>
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,7 +6,6 @@
 #include <ctype.h>
 #include "eval.h"
 #include <time.h>
-#include <stdckdint.h>
 #include <gmp.h>
 #include "util.h"
 #include "lexer.h"
@@ -274,7 +272,7 @@ static Object *_builtin_exit(Env *e, Object *o)
         GC_collect_garbage(NULL);
         exit(0);
     } else {
-
+        EASSERT(o->list.cdr->kind == O_NIL, "too many arguments passed to exit");
         Object *exit_code_object = eval_expr(e, o->list.car);
 
         EASSERT_TYPE("exit", exit_code_object, O_NUM);
