@@ -7,7 +7,7 @@
     (elem? x '(~1~2~3~4~5~6~7~8~9))))
 
 (def ident-letter? (\ (x)
-    (elem? x (charify "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ123456789?!<>=%^*+-/-\_&"))))
+    (elem? x (char-list "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ123456789?!<>=%^*+-/-\_&"))))
 
 (def tokenize (\ (chars)
     (cond (nil? chars) (list 'EOF)
@@ -16,7 +16,7 @@
           (= (first chars) ~') (cons 'Quote (tokenize (rest chars)))
           (= (first chars) ~") ; ~"
             (let (read-string-out (read-string chars))
-              (cons (list 'Str (first read-string-out))
+              (cons (list 'Str (string (first read-string-out)))
                     (tokenize (next read-string-out))))
           (= (first chars) ~~) 
             (if (nil? (rest chars))
@@ -27,15 +27,15 @@
           (elem? (first chars) whitespace) (tokenize (rest chars))
           (digit? (first chars)) 
             (let (read-number-out (read-number chars)
-                  num (first read-number-out)
+                  number (first read-number-out)
                   rst (next read-number-out))
-              (cons (list 'Num (str-to-num (stringify num)))
+              (cons (list 'Num (num (string number)))
                     (tokenize rst)))
           (ident-letter? (first chars))
             (let (read-ident-out (read-ident chars)
                   identifier (first read-ident-out)
                   rst (next read-ident-out))
-              (cons (list 'Ident (ident (stringify identifier)))
+              (cons (list 'Ident (ident (string identifier)))
                     (tokenize rst)))
           otherwise (list 'Illegal))))
 
@@ -64,6 +64,6 @@
 
 (def main (\ ()
     (do (print "=> ")
-        (println (tokenize (charify (input))))
+        (println (tokenize (char-list (input))))
         (main))))
 (main)

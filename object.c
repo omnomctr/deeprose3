@@ -58,11 +58,20 @@ Object *object_string_slice_new(const char *s, size_t len)
         .capacity = len,
     };
 
-    ret->str.ptr = malloc(sizeof(char) * len);
-    CHECK_ALLOC(ret->str.ptr);
-    memcpy(ret->str.ptr, s, len);
+    if (len == 0) 
+        ret->str.ptr = NULL;
+    else {
+        ret->str.ptr = malloc(sizeof(char) * len);
+        CHECK_ALLOC(ret->str.ptr);
+        memcpy(ret->str.ptr, s, len);
+    }
 
     return ret;
+}
+
+Object *object_string_slice_new_cstr(const char *s)
+{
+    return object_string_slice_new(s, strlen(s));
 }
 
 Object *object_ident_new(const char *s, size_t len)
@@ -70,6 +79,11 @@ Object *object_ident_new(const char *s, size_t len)
     Object *ret = object_string_slice_new(s, len);
     ret->kind = O_IDENT;
     return ret;
+}
+
+Object *object_ident_new_cstr(const char *s)
+{
+    return object_ident_new(s, strlen(s));
 }
 
 Object *object_list_new(Object *car, Object *cdr) 

@@ -58,11 +58,12 @@ static Object *_builtin_let(Env *e, Object *o);
 static Object *_builtin_do(Env *e, Object *o);
 static Object *_builtin_cond(Env *e, Object *o);
 static Object *_builtin_input(Env *e, Object *o);
-static Object *_builtin_atoi(Env *e, Object *o);
+static Object *_builtin_num(Env *e, Object *o);
 static Object *_builtin_rand(Env *e, Object *o);
 static Object *_builtin_ident(Env *e, Object *o);
-static Object *_builtin_charify(Env *e, Object *o);
-static Object *_builtin_stringify(Env *e, Object *o);
+static Object *_builtin_char_list(Env *e, Object *o);
+static Object *_builtin_string(Env *e, Object *o);
+static Object *_builtin_typeof(Env *e, Object *o);
 
 typedef struct { const char *name; Builtin func; } builtin_record;
 builtin_record builtins[] = {
@@ -95,27 +96,24 @@ builtin_record builtins[] = {
     { "do", _builtin_do },
     { "cond", _builtin_cond },
     { "input", _builtin_input },
-    { "str-to-num", _builtin_atoi },
+    { "num", _builtin_num },
     { "rand", _builtin_rand },
     { "ident", _builtin_ident },
-    { "charify", _builtin_charify },
-    { "stringify", _builtin_stringify },
+    { "char-list", _builtin_char_list },
+    { "string", _builtin_string },
+    { "type-of", _builtin_typeof },
 };
 
 void env_add_default_variables(Env *e) 
 {
     for (size_t i = 0; i < sizeof(builtins) / sizeof(builtin_record); i++) {
-        env_put(e, object_ident_new(builtins[i].name, strlen(builtins[i].name)),
+        env_put(e, object_ident_new_cstr(builtins[i].name),
                     object_builtin_new(builtins[i].func));
     }
-    char nil_ident[] = "nil";
-    env_put(e, object_ident_new(nil_ident, strlen(nil_ident)), object_nil_new());
-    char newline_ident[] = "newline";
-    env_put(e, object_ident_new(newline_ident, strlen(newline_ident)), object_char_new('\n'));
-    char space_ident[] = "space";
-    env_put(e, object_ident_new(space_ident, strlen(space_ident)), object_char_new(' '));
-    char tab_ident[] = "tab";
-    env_put(e, object_ident_new(tab_ident, strlen(tab_ident)), object_char_new('\t'));
+    env_put(e, object_ident_new_cstr("nil"), object_nil_new());
+    env_put(e, object_ident_new_cstr("newline"), object_char_new('\n'));
+    env_put(e, object_ident_new_cstr("space"), object_char_new(' '));
+    env_put(e, object_ident_new_cstr("tab"), object_char_new('\t'));
     gmp_randinit_default(randstate);
 }
 
@@ -820,19 +818,24 @@ static Object *_builtin_input(Env *e, Object *o)
     return ret;
 }
 
-static Object *_builtin_atoi(Env *e, Object *o)
+static Object *_builtin_num(Env *e, Object *o)
 {
-    EASSERT(o->kind == O_LIST, "str-to-num: needs an argument");
+    EASSERT(o->kind == O_LIST, "num: needs an argument");
     Object *str = eval_expr(e, o->list.car);
-    EASSERT_TYPE("str-to-num", str, O_STR);
-    EASSERT(o->list.cdr->kind == O_NIL, "to many arguments passed to str-to-num");
+
+    if (str->kind != O_STR) 
+        str = _builtin_string(e, object_list_new(str, object_nil_new()));
+    assert(str->kind == O_STR);
+
+    EASSERT_TYPE("num", str, O_STR);
+    EASSERT(o->list.cdr->kind == O_NIL, "to many arguments passed to num");
 
 
     int64_t num = 0;
     bool is_negative_num = str->str.ptr[0] == '-';
 
     for (size_t i = is_negative_num ? 1 : 0; i < str->str.len; i++) 
-        if (!isdigit(str->str.ptr[i])) return object_error_new("str-to-num: expected digit, got '%c'", str->str.ptr[i]);
+        if (!isdigit(str->str.ptr[i])) return object_error_new("num: expected digit, got '%c'", str->str.ptr[i]);
 
     for (size_t i = is_negative_num ? 1 : 0; i < str->str.len; i++) {
         num *= 10;
@@ -887,19 +890,30 @@ static Object *_builtin_ident(Env *e, Object *o)
     EASSERT(o->list.cdr->kind == O_NIL, "too many arguments passed to ident");
     
     Object *ident = eval_expr(e, o->list.car);
+    if (ident->kind == O_IDENT) return ident;
+
+    if (ident->kind != O_STR)
+        ident = _builtin_string(e, object_list_new(ident, object_nil_new()));
+    assert(ident->kind == O_STR);
+
     EASSERT_TYPE("ident", ident, O_STR);
     
-    Object *ret = object_ident_new(ident->str.ptr, ident->str.len);
+    Object *ret = object_shallow_copy(ident);
+    ret->kind = O_IDENT;
     ret->eval = false;
     return ret;
 }
 
-static Object *_builtin_charify(Env *e, Object *o)
+static Object *_builtin_char_list(Env *e, Object *o)
 {
-    EASSERT(o->kind == O_LIST, "charify: needs an argument");
-    EASSERT(o->list.cdr->kind == O_NIL, "too many arguments passed to charify");
+    EASSERT(o->kind == O_LIST, "char-list: needs an argument");
+    EASSERT(o->list.cdr->kind == O_NIL, "too many arguments passed to char-list");
     Object *str = eval_expr(e, o->list.car);
-    EASSERT_TYPE("charify", str, O_STR);
+    /* dont know if this is the best way to do it but whateverr */
+    if (str->kind != O_STR) 
+        str = _builtin_string(e, object_list_new(str, object_nil_new()));
+    assert(str->kind == O_STR);
+
     if (str->str.len == 0) return object_nil_new();
 
     Object *ret = object_new_generic();
@@ -916,40 +930,86 @@ static Object *_builtin_charify(Env *e, Object *o)
         }
     }
 
+    ret->eval = false;
     return ret;
 }
 
-static Object *_builtin_stringify(Env *e, Object *o)
+static Object *_builtin_string(Env *e, Object *o)
 {
-    EASSERT(o->kind == O_LIST, "stringify: needs an argument");
-    EASSERT(o->list.cdr->kind == O_NIL, "too many arguments passed to charify");
-    Object *chars = eval_expr(e, o->list.car);
-    if (chars->kind == O_NIL) return object_nil_new();
-    EASSERT_TYPE("stringify", chars, O_LIST);
+    EASSERT(o->kind == O_LIST, "string: needs an argument");
+    EASSERT(o->list.cdr->kind == O_NIL, "too many arguments passed to string");
+    Object *to_str = eval_expr(e, o->list.car);
 
-    /* figuring out the size to alloc + making sure all elements are chars */
-    size_t str_size = 0;
-    {
-       Object *cursor = chars;
-       while (cursor->kind == O_LIST) {
-           EASSERT(cursor->list.car->kind == O_CHAR, "stringify: list element wasn't a char");
-           str_size++;
-           cursor = cursor->list.cdr;
-       }
+    switch (to_str->kind) {
+        case O_LIST: {
+            /* figuring out the size to alloc + making sure all elements are chars */
+            size_t str_size = 0;
+            {
+               Object *cursor = to_str;
+               while (cursor->kind == O_LIST) {
+                   EASSERT(cursor->list.car->kind == O_CHAR, "string: list element wasn't a char");
+                   str_size++;
+                   cursor = cursor->list.cdr;
+               }
+            }
+
+            Object *ret = object_new_generic();
+            ret->kind = O_STR;
+            ret->str.len = ret->str.capacity = str_size;
+            ret->str.ptr = malloc(sizeof(char) * str_size);
+            CHECK_ALLOC(ret->str.ptr);
+
+            size_t i = 0;
+            while (to_str->kind == O_LIST) {
+                ret->str.ptr[i++] = to_str->list.car->character;
+                to_str = to_str->list.cdr;
+            }
+
+            return ret;
+        } break;
+        case O_STR: {
+            return to_str;
+        } break;
+        case O_NIL: {
+            return object_string_slice_new_cstr("");
+        } break;
+        case O_IDENT: {
+            Object *ret = object_shallow_copy(to_str);
+            ret->kind = O_STR;
+            return ret;
+        } break;
+        case O_NUM: {
+            char *mpz_out = mpz_get_str(NULL, 10, to_str->num);
+            Object *ret = object_string_slice_new_cstr(mpz_out);
+            free(mpz_out);
+            return ret;
+        } break;
+        case O_ERROR: {
+            /* you shouldn't be able to get here */
+            assert(0); 
+            return (void*)0xDEADBEEF;
+        } break;
+        case O_CHAR: {
+            return object_string_slice_new(&to_str->character, 1);
+        } break;
+        case O_BUILTIN: case O_FUNCTION: {
+            return object_error_new("to-string functionality is not implemented for %scs", 
+                    object_type_as_string(o->kind));
+        } break;
     }
 
-    Object *ret = object_new_generic();
-    ret->kind = O_STR;
-    ret->str.len = ret->str.capacity = str_size;
-    ret->str.ptr = malloc(sizeof(char) * str_size);
-    CHECK_ALLOC(ret->str.ptr);
-
-    size_t i = 0;
-    while (chars->kind == O_LIST) {
-        ret->str.ptr[i++] = chars->list.car->character;
-        chars = chars->list.cdr;
-    }
-
-    return ret;
+    assert(0 && "infallible");
+    return NULL;
 }
 
+static Object *_builtin_typeof(Env *e, Object *o)
+{
+    EASSERT(o->kind == O_LIST, "type-of: needs an argument");
+    EASSERT(o->list.cdr->kind == O_NIL, "too many arguments passed to type-of");
+
+    Object *obj = eval_expr(e, o->list.car);
+     
+    Object *ret = object_ident_new_cstr(object_type_as_string(obj->kind));
+    ret->eval = false;
+    return ret;
+}

@@ -71,7 +71,9 @@ struct Object {
 Object *object_new_generic(void);
 Object *object_list_new(Object *car, Object *cdr);
 Object *object_string_slice_new(const char *s, size_t len);
+Object *object_string_slice_new_cstr(const char *s);
 Object *object_ident_new(const char *s, size_t len);
+Object *object_ident_new_cstr(const char *s);
 Object *object_num_new(int64_t num);
 Object *object_num_new_token(Token *t);
 Object *object_nil_new(void);
