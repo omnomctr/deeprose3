@@ -66,4 +66,3 @@
     (do (print "=> ")
         (println (tokenize (char-list (input))))
         (main))))
-(main)

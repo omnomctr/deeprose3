@@ -35,8 +35,11 @@ int main(int argc, char *argv[])
         char *program = file_to_str(f);
         fclose(f);
 
-
         int status = eval_program(program, env, false);
+
+        /* run the main function - if it isn't found then theres
+         * an error */
+        eval_program("(main)", env, false);
         GC_collect_garbage(NULL);
         free(program);
         return status;

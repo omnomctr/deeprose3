@@ -823,11 +823,11 @@ static Object *_builtin_num(Env *e, Object *o)
     EASSERT(o->kind == O_LIST, "num: needs an argument");
     Object *str = eval_expr(e, o->list.car);
 
+    if (str->kind == O_NUM) return str;
     if (str->kind != O_STR) 
         str = _builtin_string(e, object_list_new(str, object_nil_new()));
     assert(str->kind == O_STR);
 
-    EASSERT_TYPE("num", str, O_STR);
     EASSERT(o->list.cdr->kind == O_NIL, "to many arguments passed to num");
 
 

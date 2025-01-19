@@ -20,5 +20,6 @@
                                      (guessing-game answer))
                 (< guess answer) (do (println "your guess is lower than the answer. try again :)")
                                      (guessing-game answer)))))))
-(println "im thinking of a number from 1 to 100. what is it?")
-(guessing-game (rand 1 100))
+(def main (\ ()
+  (do (println "im thinking of a number from 1 to 100. what is it?")
+      (guessing-game (rand 1 100)))))

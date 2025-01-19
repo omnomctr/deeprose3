@@ -1,11 +1,21 @@
+; the main function is ran when deeprose runs the program at a 
+; command line. It is mandatory for a deeprose program to have a 
+; main function if you want to run it at a shell.
+; (load)ing it at the repl does not run the main function.
+(def main (\ ()
+  (do (println "6!: " (fact 6)) ; => 720
+      (println "the first to elements of the fibonacci sequence: " (fib 10)) ; => (1 1 2 3 5 8 13 21 34 55)
+      (println "even numbers from 0 to 10: " (filter even? (range 0 10))) ; => (1 1 2 3 5 8 13 21 34 55)
+      (println "(1 2 3) mapped with inc (+ 1): " (map inc '(1 2 3))) ; => (2 3 4)
+      (println "sum of 1 to 10: " (sum (range 1 10))) ; => 55
+      (println "quicksort (5 6 3 2 3 4 6 7): " (quicksort '(5 6 3 2 3 4 6 7))) ;=> (2 3 3 4 5 6 6 7)
+)))
+
 ; factorial
 (def fact (\ (n)
     (if (= n 0)
         1
         (* n (fact (dec n))))))
-
-(print "6!: ")
-(println (fact 6)) ;=> 720
 
 ; fibonacci sequence
 (def fib (\ (n)
@@ -17,18 +27,7 @@
                     (fib^ current (+ prev current) (dec n))))))
       (fib^ 0 1 n))))
 
-
-(print "the first 10 elements of the fibonacci sequence: ")
-(println (fib 10)) ;=> (1 1 2 3 5 8 13 21 34 55)
-; maps and filters
-(print "even numbers from 0 to 10: ")
-(println (filter even? (range 0 10))) ;=> (0 2 4 6 8 10)
-(print "(1 2 3) mapped with inc (+1): ")
-(println (map inc '(1 2 3))) ;=> (2 3 4)
-
-(print "sum of 1 to 10: ")
-(println (sum (range 1 10))) ;=> 55
-
+; quicksort example
 (def quicksort (\ (xs)
     (if (nil? xs) 
         (list)
@@ -38,16 +37,6 @@
                   (list x)
                   (quicksort (filter (\ (n) (>= n x)) xs)))))))
         
-(print "quicksort (5 6 3 2 3 4 6 7): ")
-(println (quicksort '(5 6 3 2 3 4 6 7))) ;=> (2 3 3 4 5 6 6 7)
 
-; stolen off of haskell
-; [n | n<-[2..], product [1..n-1] `rem` n == n-1]   -- Wilson's theorem
-; doesnt work past a certain point bc the product of [1..more than 13] is larger than the int64 max
-(def primes (\ (upper-bound)
-    (filter 
-      (\ (n) (= (dec n)
-                (mod (product (range 1 (dec n))) n)))
-      (range 2 upper-bound))))
 
-(println "primes less than 20: " (primes 20))
+      

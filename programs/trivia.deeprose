@@ -44,4 +44,5 @@
                     (println "===")
                     (trivia-loop score (remove-current-question questions q))))))))))
 
-(trivia-loop 0 questions)
+(def main (\ ()
+    (trivia-loop 0 questions))
