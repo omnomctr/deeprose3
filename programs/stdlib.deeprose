@@ -100,11 +100,16 @@
       (foldr min^ x xs))))
 
 (def concat (\ (& xs)
-    (let (concat^ (\ (xs ys)
+    (let (concat-list (\ (xs ys)
                     (if (nil? xs) 
                         ys
-                        (cons (first xs) (concat^ (rest xs) ys)))))
-      (foldr concat^ nil xs))))
+                        (cons (first xs) (concat-list (rest xs) ys))))
+          concat-str (\ (strs)
+                    (string (apply concat (map char-list strs)))))
+      (cond (nil? xs) nil
+            (type-is? (first xs) 'string) (concat-str xs)
+            (type-is? (first xs) 'list) (foldr concat-list nil xs)
+            otherwise (error (concat "concat: expected string or list, got " (type-of (first xs)) "."))))))
 
 (def apply (\ (f xs)
     (eval (cons f xs))))
@@ -135,3 +140,5 @@
 
 (def -> (\ (x & fs)
     (foldl (\ (f x) (f x)) x fs)))
+
+(def type-is? (\ (expr t) (= (type-of expr) t)))
