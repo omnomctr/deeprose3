@@ -7,6 +7,7 @@
 #include "eval.h"
 #include <time.h>
 #include <gmp.h>
+#include <time.h>
 #include "util.h"
 #include "lexer.h"
 #include "parser.h"
@@ -115,6 +116,7 @@ void env_add_default_variables(Env *e)
     env_put(e, object_ident_new_cstr("space"), object_char_new(' '));
     env_put(e, object_ident_new_cstr("tab"), object_char_new('\t'));
     gmp_randinit_default(randstate);
+    gmp_randseed_ui(randstate, (unsigned long int) time(NULL));
 }
 
 int eval_program(const char *program, Env *env /*nullable*/, bool print_eval)
