@@ -142,6 +142,7 @@ Object *object_nil_new(void)
     return ret;
 }
 
+/* worst function in the codebase by far */
 Object *object_error_new(const char *fmt, ...)
 {
     Object *ret = object_new_generic();
