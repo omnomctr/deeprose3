@@ -108,7 +108,9 @@
                     (string (apply concat (map char-list strs)))))
       (cond (nil? xs) nil
             (type-is? (first xs) 'string) (concat-str xs)
-            (type-is? (first xs) 'list) (foldr concat-list nil xs)
+            (or (type-is? (first xs) 'list)
+                (type-is? (first xs) 'nil))
+                  (foldr concat-list nil xs)
             otherwise (error (concat "concat: expected string or list, got " (type-of (first xs)) "."))))))
 
 (def apply (\ (f xs)
