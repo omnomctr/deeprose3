@@ -1,10 +1,13 @@
 #include <assert.h>
+#include <stdlib.h>
 #include "arena.h"
 #include "parser.h"
 #include "object.h"
+#include "util.h"
 
 static Object *_parser_parse_expr(Parser *p);
 static Object *_parse_list(Parser *p);
+static Object *_parser_parse_string_token(Token *t);
 
 const char * const parser_error_as_string_arr[] = {
     [PE_NO_ERROR] = "no errors :)",
@@ -46,7 +49,7 @@ static Object *_parser_parse_expr(Parser *p)
             ret->eval = false;
         } break; 
         case t_STR: {
-            ret = object_string_slice_new(current_token->string_slice.ptr, current_token->string_slice.len);
+            ret = _parser_parse_string_token(current_token);
         } break;
         case t_IDENT: {
             ret = object_string_slice_new(current_token->string_slice.ptr, current_token->string_slice.len);
@@ -123,3 +126,34 @@ bool parser_at_eof(Parser *p)
 {
     return p->cursor->token->type == t_EOF;
 }
+
+static Object *_parser_parse_string_token(Token *t)
+{
+    Object *ret = object_new_generic();
+    ret->kind = O_STR;
+    ret->str.capacity = t->string_slice.len;
+    ret->str.ptr = malloc(sizeof(char) * ret->str.capacity);
+    CHECK_ALLOC(ret->str.ptr);
+    
+    const char *str = t->string_slice.ptr;
+    size_t len = t->string_slice.len;
+
+    size_t i = 0;
+
+    bool escaped = false;
+    for (size_t str_index = 0; str_index < len; str_index++) {
+        if (str[str_index] == '\\' && !escaped) {
+            escaped = true;
+            continue;
+        } 
+        if (escaped) escaped = false;
+        
+        ret->str.ptr[i++] = str[str_index];
+    }
+
+    ret->str.len = i;
+
+    return ret;
+}
+
+

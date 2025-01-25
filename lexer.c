@@ -129,11 +129,29 @@ static Token *_token_new(Lexer *l, enum TokenType t)
     return ret;
 }
 
-static bool _isnt_unquote(char c) { return c != '"'; }
 static Token *_read_string(Lexer *l)
 {
-   _lexer_read_char(l);
-   return _lexer_read(l, t_STR, _isnt_unquote);
+    _lexer_read_char(l);
+
+    const char *ptr = &l->str[l->pos];
+    size_t original_pos = l->pos;
+
+    /* its the parsers job to clean up any escape characters since 
+     * we dont own the string */
+
+    bool escaped = false;
+    while ((l->ch != '"' || escaped) && l->ch != '\0') {
+        if (l->ch == '\\' && !escaped) escaped = true;
+        else if (escaped) escaped = false;
+
+        _lexer_read_char(l);
+    }
+
+    Token *ret = _token_new(l, t_STR);
+    ret->string_slice.ptr = ptr;
+    ret->string_slice.len = l->pos - original_pos;
+    
+    return ret;
 }
 
 static bool _is_identifier_letter(char c)
