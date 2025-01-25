@@ -52,8 +52,7 @@ static Object *_parser_parse_expr(Parser *p)
             ret = _parser_parse_string_token(current_token);
         } break;
         case t_IDENT: {
-            ret = object_string_slice_new(current_token->string_slice.ptr, current_token->string_slice.len);
-            ret->kind = O_IDENT;
+            ret = object_ident_new(current_token->string_slice.ptr, current_token->string_slice.len);
         } break;
         case t_NUM: {
             ret = object_num_new_token(current_token);
