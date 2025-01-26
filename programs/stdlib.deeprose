@@ -11,6 +11,8 @@
 
 (def nil? (\ (xs) (= nil xs)))
 
+(def list (\ (& xs) xs))
+
 (def range (\ (start end)
     (if (= start end)
         (list start)

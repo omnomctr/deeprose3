@@ -47,7 +47,6 @@ static Object *_builtin_if(Env *e, Object *o);
 static Object *_builtin_equals(Env *e, Object *o);
 static Object *_builtin_print(Env *e, Object *o);
 static Object *_builtin_println(Env *e, Object *o);
-static Object *_builtin_list(Env *e, Object *o);
 static Object *_builtin_mod(Env *e, Object *o);
 static Object *_builtin_not(Env *e, Object *o);
 static Object *_builtin_and(Env *e, Object *o);
@@ -85,7 +84,6 @@ builtin_record builtins[] = {
     { "=", _builtin_equals },
     { "print", _builtin_print },
     { "println", _builtin_println },
-    { "list", _builtin_list },
     { "mod", _builtin_mod },
     { "not", _builtin_not },
     { "and", _builtin_and },
@@ -350,6 +348,7 @@ static Object *_eval_list_elements(Env *e, Object *o)
     if (o->kind != O_LIST) return object_new_generic();
     Object *ret = object_new_generic();
     ret->kind = O_LIST;
+    ret->eval = false;
 
     Object *cursor = ret;
     while (o->kind != O_NIL) {
@@ -611,36 +610,6 @@ static Object *_builtin_println(Env *e, Object *o)
     }
     putchar('\n');
     return object_nil_new();
-}
-
-static Object *_builtin_list(Env *e, Object *o)
-{
-    if (o->kind == O_NIL) return object_nil_new();
-    else {
-        EASSERT(o->kind == O_LIST, "list: needs arguments");
-
-        Object *cursor = o;
-        Object *ret = object_new_generic();
-        Object *ret_cursor = ret;
-
-        while (cursor->kind == O_LIST) {
-            ret_cursor->kind = O_LIST;
-            ret_cursor->list.car = eval_expr(e, cursor->list.car);
-
-            cursor = cursor->list.cdr;
-            if (cursor->kind != O_LIST) {
-                ret_cursor->list.cdr = object_nil_new();
-                break;
-            } else {
-                ret_cursor->list.cdr = object_new_generic();
-                ret_cursor = ret_cursor->list.cdr;
-                ret_cursor->kind = O_LIST;
-            }
-        }
-
-        ret->eval = false;
-        return ret;
-    }
 }
 
 static Object *_builtin_mod(Env *e, Object *o)
