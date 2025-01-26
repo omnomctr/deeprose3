@@ -801,20 +801,21 @@ static Object *_builtin_num(Env *e, Object *o)
 
     EASSERT(o->list.cdr->kind == O_NIL, "to many arguments passed to num");
 
+    
+    char *cstr = malloc(sizeof(char) * (str->str.len + 1));
+    CHECK_ALLOC(cstr);
 
-    int64_t num = 0;
-    bool is_negative_num = str->str.ptr[0] == '-';
+    memcpy(cstr, str->str.ptr, str->str.len);
+    cstr[str->str.len] = '\0';
 
-    for (size_t i = is_negative_num ? 1 : 0; i < str->str.len; i++) 
-        if (!isdigit(str->str.ptr[i])) return object_error_new("num: expected digit, got '%c'", str->str.ptr[i]);
-
-    for (size_t i = is_negative_num ? 1 : 0; i < str->str.len; i++) {
-        num *= 10;
-        num += (int64_t)str->str.ptr[i] - (int64_t)'0';
+    Object *ret = object_num_new(0);
+    if (mpz_set_str(ret->num, cstr, 10) != 0) {
+        free(cstr);
+        return object_error_new("num: couldnt convert to number");
     }
-    if (is_negative_num) num *= -1;
 
-    return object_num_new(num);
+    free(cstr);
+    return ret;
 }
 
 static Object *_builtin_rand(Env *e, Object *o)
