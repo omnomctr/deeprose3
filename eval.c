@@ -3,7 +3,6 @@
 #include <string.h>
 #include <setjmp.h>
 #include <stdio.h>
-#include <ctype.h>
 #include "eval.h"
 #include <time.h>
 #include <gmp.h>
