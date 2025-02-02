@@ -145,7 +145,7 @@ static Object *_parser_parse_string_token(Token *t)
             escaped = true;
             continue;
         } 
-        if (escaped) escaped = false;
+        escaped ^= escaped;
         
         ret->str.ptr[i++] = str[str_index];
     }
