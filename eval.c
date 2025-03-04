@@ -7,6 +7,7 @@
 #include <time.h>
 #include <gmp.h>
 #include <time.h>
+#include <dlfcn.h>
 #include "util.h"
 #include "lexer.h"
 #include "parser.h"
@@ -15,17 +16,6 @@ jmp_buf on_error_jmp_buf;
 Object *on_error_error = NULL;
 
 gmp_randstate_t randstate;
-
-#define EASSERT(expr, error, ...) \
-    do { if (!(expr)) return object_error_new((error) __VA_OPT__(,) __VA_ARGS__); } while (0);
-
-#define EASSERT_TYPE(f_name, obj, expected_type) \
-    do { if ((obj)->kind != (expected_type)) { \
-          if ((obj)->kind == O_ERROR) return o; \
-          else return object_error_new(f_name ": expected %sc, got %sc", \
-                  object_type_as_string((expected_type)), \
-                  object_type_as_string((obj)->kind)); \
-                      } } while(0);
 
 static Object *_eval_sexpr(Env *e, Object *o);
 
@@ -63,6 +53,7 @@ static Object *_builtin_ident(Env *e, Object *o);
 static Object *_builtin_char_list(Env *e, Object *o);
 static Object *_builtin_string(Env *e, Object *o);
 static Object *_builtin_typeof(Env *e, Object *o);
+static Object *_builtin_import_shared(Env *e, Object *o);
 
 typedef struct { const char *name; Builtin func; } builtin_record;
 builtin_record builtins[] = {
@@ -100,6 +91,7 @@ builtin_record builtins[] = {
     { "char-list", _builtin_char_list },
     { "string", _builtin_string },
     { "type-of", _builtin_typeof },
+    { "import-shared", _builtin_import_shared },
 };
 
 void env_add_default_variables(Env *e) 
@@ -984,3 +976,49 @@ static Object *_builtin_typeof(Env *e, Object *o)
     ret->eval = false;
     return ret;
 }
+
+static Object *_builtin_import_shared(Env *e, Object *o)
+{
+    EASSERT(o->kind == O_LIST, "import-shared: needs a filename argument");
+    EASSERT(o->list.cdr->kind == O_LIST, "import-shared: needs multiple arguments");
+
+    Object *filename = eval_expr(e, o->list.car);
+    EASSERT_TYPE("import-shared", filename, O_STR);
+
+    char *filename_cstr = malloc(sizeof(char) * (filename->str.len + 1));
+    CHECK_ALLOC(filename_cstr);
+
+    memcpy(filename_cstr, filename->str.ptr, filename->str.len);
+    filename_cstr[filename->str.len] = '\0';
+
+    void *handle = dlopen(filename_cstr, RTLD_LAZY | RTLD_NODELETE); // we will keep the functions around after its dlclose'd
+    free(filename_cstr);
+    
+    EASSERT(handle != NULL, "import-shared: could not open shared file \"%s\"", filename);
+
+    Object *cursor = o->list.cdr;
+    while (cursor->kind != O_NIL) {
+        EASSERT(o->kind == O_LIST, "import-shared: expected list");
+        Object *to_import = eval_expr(e, cursor->list.car);
+        EASSERT_TYPE("import-shared", to_import, O_STR);
+        
+        char *to_import_cstr = malloc(sizeof(char) * (to_import->str.len + 1));
+        CHECK_ALLOC(to_import_cstr);
+        memcpy(to_import_cstr, to_import->str.ptr, to_import->str.len);
+        to_import_cstr[to_import->str.len] = '\0';
+
+        Builtin f = dlsym(handle, to_import_cstr); 
+        EASSERT(f != NULL, "import-shared: could not find \"%s\"", to_import);
+        free(to_import_cstr);
+        Object *f_ = object_builtin_new(f);
+        env_put(e, object_ident_new(to_import->str.ptr, to_import->str.len), f_);
+
+        cursor = cursor->list.cdr;
+    }
+    dlclose(handle);
+
+    return object_nil_new();
+}
+
+
+
