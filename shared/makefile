@@ -1,14 +1,13 @@
-shared.so: shared.o eval.o object.o
-	gcc  shared.o eval.o object.o -shared -o shared.so
+CFLAGS = -fPIC -lgmp
+
+shared.so: shared.o eval.o object.o environment.o parser.o arena.o util.o lexer.o
+	gcc $(CFLAGS) shared.o eval.o object.o environment.o parser.o arena.o util.o lexer.o -shared -o shared.so
 
 shared.o: shared.c
-	gcc -c -fPIC shared.c -o shared.o
+	gcc -c $(CFLAGS) shared.c -o shared.o
 
-eval.o: ../eval.c
-	gcc -c -fPIC ../eval.c -lgmp -ldl -o eval.o
+%.o: ../%.c
+	gcc $(CFLAGS) -c $^
 
-object.o: ../object.c
-	gcc -c -fPIC ../object.c -lgmp -ldl -o object.o
 clean:
-	rm shared.o shared.so eval.o object.o
-
+	rm *.o shared.so
