@@ -14,7 +14,7 @@ static Token *_token_new(Lexer *l, enum TokenType t);
 static Token *_read_string(Lexer *l);
 static Token *_read_number(Lexer *l);
 static Token *_read_identifier(Lexer *l);
-static Token* _lexer_read(Lexer *l, enum TokenType type, bool(*pred)(char));
+static Token *_lexer_read(Lexer *l, enum TokenType type, bool(*pred)(char));
 
 static bool _is_identifier_special_char(char c);
 
