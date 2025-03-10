@@ -1,4 +1,4 @@
-BUILDDIR = ./.build
+BUILDDIR = $(shell pwd)/.build
 CFLAGS = -Wall -lgmp -O3 -ldl -fpic
 CC = gcc
 
@@ -29,4 +29,4 @@ $(BUILDDIR)/lib/libdeeprose.so: $(BUILDDIR)/lexer.o $(BUILDDIR)/arena.o $(BUILDD
 	$(CC) $(CFLAGS) -shared -o $@ $^
 
 clean:
-	rm -r ./$(BUILDDIR)/
+	rm -r $(BUILDDIR)/
