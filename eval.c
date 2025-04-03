@@ -994,7 +994,7 @@ static Object *_builtin_import_shared(Env *e, Object *o)
     void *handle = dlopen(filename_cstr, RTLD_LAZY | RTLD_NODELETE); // we will keep the functions around after its dlclose'd
     free(filename_cstr);
     
-    EASSERT(handle != NULL, "import-shared: could not open shared file \"%s\"", filename);
+    EASSERT(handle != NULL, "import-shared: could not open shared file \"%s\": {%sc}", filename, dlerror());
 
     Object *cursor = o->list.cdr;
     while (cursor->kind != O_NIL) {
@@ -1008,7 +1008,7 @@ static Object *_builtin_import_shared(Env *e, Object *o)
         to_import_cstr[to_import->str.len] = '\0';
 
         Builtin f = dlsym(handle, to_import_cstr); 
-        EASSERT(f != NULL, "import-shared: could not find \"%s\"", to_import);
+        EASSERT(f != NULL, "import-shared: could not find \"%s\": {%sc}", to_import, dlerror());
         free(to_import_cstr);
         Object *f_ = object_builtin_new(f);
         env_put(e, object_ident_new(to_import->str.ptr, to_import->str.len), f_);

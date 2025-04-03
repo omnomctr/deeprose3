@@ -8,11 +8,11 @@
 
 #include <stdlib.h>
 
-Object *minesweeper(Env *e, Object *o) 
+Object *doom(Env *e, Object *o) 
 {
-    EASSERT(o->kind == O_NIL, "minesweeper: expected 0 arguments");
+    EASSERT(o->kind == O_NIL, "doom: expected 0 arguments");
 
-    system("gnome-mines");
+    system("gzdoom");
 
     return object_nil_new();
 }
