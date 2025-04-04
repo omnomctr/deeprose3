@@ -17,8 +17,12 @@ $(BUILDDIR)/%.o: %.c %.h
 	mv *.o $(BUILDDIR)/
 	mv *.h.gch $(BUILDDIR)/
 
-$(BUILDDIR)/stdlib.h: programs/stdlib.deeprose create_stdlib_header.py
-	python3 create_stdlib_header.py $(BUILDDIR)
+$(BUILDDIR)/create_stdlib_header: create_stdlib_header.c
+	@mkdir -p $(BUILDDIR)
+	$(CC) create_stdlib_header.c -o $(BUILDDIR)/create_stdlib_header
+
+$(BUILDDIR)/stdlib.h: programs/stdlib.deeprose $(BUILDDIR)/create_stdlib_header
+	$(BUILDDIR)/create_stdlib_header <programs/stdlib.deeprose >$(BUILDDIR)/stdlib.h
 
 $(BUILDDIR)/deeprose3: $(BUILDDIR)/lib/libdeeprose.so
 	gcc -L$(BUILDDIR)/lib -o $(BUILDDIR)/deeprose3 main.c -ldeeprose -Wl,-rpath=$(BUILDDIR)/lib
