@@ -3,7 +3,7 @@
 lisp-based language. Look at the example programs and standard library in [programs/](https://github.com/omnomctr/deeprose3/tree/main/programs).
 You can see all builtin functions / special forms in eval.c's builtins[].
 
-has a garbage collector, lists as first class citizens, higher order functions and extensibility with the c programming language
+has a garbage collector, lists as first class citizens, higher order functions and extensibility with the C programming language
 
 ```lisp
 (def quicksort (\ (xs)
@@ -19,14 +19,14 @@ has a garbage collector, lists as first class citizens, higher order functions a
 
 # install
 
-**dependencies**: gcc, make, GMP, rlwrap
+**dependencies**: [GCC](https://gcc.gnu.org/), [make](https://www.gnu.org/software/make/), [GMP](https://gmplib.org/), [readline](https://www.gnu.org/software/readline/)
 
 ```sh
 $ git clone https://github.com/omnomctr/deeprose3
 
 $ cd deeprose3
 $ make # to compile, find the binary in .build/
-$ make run # compile and run rlwrap deeprose3 
+$ make run # compile and run deeprose3 
 $ sudo make install # install to /usr/bin
 ```
 
@@ -35,5 +35,5 @@ find all TODO's in the code:
 ```ch
 grep -rn "TODO" *.[ch]
 ```
-* add dynamic loading with `dlopen`?
+* add dynamic loading with `dlopen`? **DONE**
 * add namespaces maybe

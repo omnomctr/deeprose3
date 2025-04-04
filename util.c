@@ -2,10 +2,8 @@
 #include <stdlib.h>
 #include "util.h"
 
-
 char *get_line(FILE *f)
 {
-    // I LOVE VECTOR PATTERN!!!!
     struct { size_t len, capacity; char *ptr; } str = { .len = 0, .capacity = 1, .ptr = NULL };
     str.ptr = malloc(sizeof(char) * str.capacity);
     CHECK_ALLOC(str.ptr);

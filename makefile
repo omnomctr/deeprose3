@@ -9,7 +9,7 @@ install: $(BUILDDIR)/deeprose3
 
 run:
 	@make all
-	rlwrap $(BUILDDIR)/deeprose3
+	$(BUILDDIR)/deeprose3
 
 $(BUILDDIR)/%.o: %.c %.h
 	@mkdir -p $(BUILDDIR)
@@ -24,8 +24,8 @@ $(BUILDDIR)/create_stdlib_header: create_stdlib_header.c
 $(BUILDDIR)/stdlib.h: programs/stdlib.deeprose $(BUILDDIR)/create_stdlib_header
 	$(BUILDDIR)/create_stdlib_header <programs/stdlib.deeprose >$(BUILDDIR)/stdlib.h
 
-$(BUILDDIR)/deeprose3: $(BUILDDIR)/lib/libdeeprose.so
-	gcc -L$(BUILDDIR)/lib -o $(BUILDDIR)/deeprose3 main.c -ldeeprose -Wl,-rpath=$(BUILDDIR)/lib
+$(BUILDDIR)/deeprose3: $(BUILDDIR)/lib/libdeeprose.so main.c
+	gcc -L$(BUILDDIR)/lib -o $(BUILDDIR)/deeprose3 main.c -O3 -ldeeprose -lreadline -Wl,-rpath=$(BUILDDIR)/lib
 
 $(BUILDDIR)/lib/libdeeprose.so: $(BUILDDIR)/lexer.o $(BUILDDIR)/arena.o $(BUILDDIR)/object.o $(BUILDDIR)/parser.o $(BUILDDIR)/eval.o $(BUILDDIR)/environment.o $(BUILDDIR)/stdlib.h $(BUILDDIR)/util.o
 	@mkdir -p $(BUILDDIR)

@@ -5,6 +5,8 @@
 #include "object.h"
 #include "eval.h"
 #include ".build/stdlib.h"
+#include <readline/readline.h>
+#include <readline/history.h>
 
 int main(int argc, char *argv[])
 {
@@ -12,13 +14,20 @@ int main(int argc, char *argv[])
     env_add_default_variables(env);
     eval_program(stdlib, env, false);
 
-    if (argc == 1) {
+    if (argc == 1 || argc == 2 && strcmp(argv[1], "-repl") == 0) {
+        /* set up readline */
+        rl_bind_key('\t', rl_complete); // autocomplete when tab is hit
+        using_history();
+        rl_variable_bind("blink-matching-paren", "On");
+
         for (;;) {
-            printf("=> "); fflush(stdout);
-            char* line = get_line(stdin);
+            char *line = readline("=> ");
+            if (line == NULL) break;
             if (strcmp(line, "") == 0) {
                 free(line); continue;
             }
+
+            add_history(line);
 
             int status; 
             if ((status = eval_program(line, env, true)) != 0) {
@@ -26,6 +35,7 @@ int main(int argc, char *argv[])
                 return status;
             }
             free(line);
+
         }
         GC_collect_garbage(NULL);
 
