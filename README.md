@@ -19,7 +19,7 @@ has a garbage collector, lists as first class citizens, higher order functions a
 
 # install
 
-**dependencies**: [GCC](https://gcc.gnu.org/), [make](https://www.gnu.org/software/make/), [GMP](https://gmplib.org/), [readline](https://www.gnu.org/software/readline/)
+**dependencies**: [GCC](https://gcc.gnu.org/), [make](https://www.gnu.org/software/make/), [GMP](https://gmplib.org/), [readline](https://www.gnu.org/software/readline/) (should all be automatically installed on a GNU/Linux system)
 
 ```sh
 $ git clone https://github.com/omnomctr/deeprose3
