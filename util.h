@@ -18,4 +18,14 @@
 char *get_line(FILE *);
 char *file_to_str(FILE *f);
 
+#define da_append(vec, elem) \
+    do {\
+        if ((vec).len >= (vec).capacity) {\
+            (vec).capacity *= 2;\
+            (vec).ptr = realloc((vec).ptr, sizeof(*(vec).ptr) * (vec).capacity);\
+            CHECK_ALLOC((vec).ptr);\
+        }\
+        (vec).ptr[(vec).len++] = elem;\
+    } while (0)
+
 #endif

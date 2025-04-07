@@ -142,7 +142,19 @@ Object *object_nil_new(void)
     return ret;
 }
 
-/* worst function in the codebase by far */
+// helper function for object_error_new()
+static void _copy_slice_to_ss(struct StringSlice *s, const char *str, size_t len) 
+{
+    if (s->len + len >= s->capacity) {
+        while (s->capacity < s->len) 
+            s->capacity *= 2;
+        s->ptr = realloc(s->ptr, sizeof(char) * s->capacity);
+        CHECK_ALLOC(s->ptr);
+    }
+    memcpy(s->ptr + s->len, str, len);
+    s->len += len;
+}
+
 Object *object_error_new(const char *fmt, ...)
 {
     Object *ret = object_new_generic();
@@ -160,36 +172,18 @@ Object *object_error_new(const char *fmt, ...)
             fmt++;
             switch (*fmt++) { 
                 case '%': {
-                    if (ret->str.len >= ret->str.capacity) {
-                        ret->str.capacity *= 2;
-                        ret->str.ptr = realloc(ret->str.ptr, sizeof(char) * ret->str.capacity);
-                        CHECK_ALLOC(ret->str.ptr);                       
-                    }
-                    ret->str.ptr[ret->str.len++] = '%';
-                    fmt++;
+                    da_append(ret->str, '%');
                 } break;
                 case 's': {
                     if (*fmt == 'c') /* null-terminated c string */ {
                         fmt++;
                         const char *str = va_arg(ap, char *);
                         size_t len = strlen(str);
-                        if (ret->str.len + len >= ret->str.capacity) {
-                            ret->str.capacity += len;
-                            ret->str.ptr = realloc(ret->str.ptr, sizeof(char) * ret->str.capacity);
-                            CHECK_ALLOC(ret->str.ptr);
-                        }
-                        memcpy(ret->str.ptr + ret->str.len, str, len);
-                        ret->str.len += len;
+                        _copy_slice_to_ss(&ret->str, str, len);
                     } else {
                         Object *string = va_arg(ap, Object *);
                         assert(string->kind == O_STR || string->kind == O_IDENT);
-                        if (ret->str.len + string->str.len >= ret->str.capacity) {
-                            ret->str.capacity += string->str.len;
-                            ret->str.ptr = realloc(ret->str.ptr, sizeof(char) * ret->str.capacity);
-                            CHECK_ALLOC(ret->str.ptr);
-                        }
-                        memcpy(ret->str.ptr + ret->str.len, string->str.ptr, string->str.len);
-                        ret->str.len += string->str.len;
+                        _copy_slice_to_ss(&ret->str, string->str.ptr, string->str.len);
                     }
                 } break;
                 case 'd': {
@@ -198,33 +192,18 @@ Object *object_error_new(const char *fmt, ...)
                     char *num_cstr = mpz_get_str(NULL, 10, num->num);
                     size_t len = strlen(num_cstr);
 
-                    if (ret->str.len + len >= ret->str.capacity) {
-                        ret->str.capacity += len;
-                        ret->str.ptr = realloc(ret->str.ptr, sizeof(char) * ret->str.capacity);
-                        CHECK_ALLOC(ret->str.ptr);
-                    }
-                    memcpy(ret->str.ptr + ret->str.len, num_cstr, len);
-                    ret->str.len += len;
+                    _copy_slice_to_ss(&ret->str, num_cstr, len);
                     free(num_cstr);
                 } break;
                 case 'c': {
-                    if (ret->str.len >= ret->str.capacity) {
-                        ret->str.capacity *= 2;
-                        ret->str.ptr = realloc(ret->str.ptr, sizeof(char) * ret->str.capacity);
-                        CHECK_ALLOC(ret->str.ptr);
-                    }
                     int c = va_arg(ap, int);
-                    ret->str.ptr[ret->str.len++] = (char)c;
+                    da_append(ret->str, c);
                 } break;
                 default: assert(0);
             } 
         } else {
-            if (ret->str.len >= ret->str.capacity) {
-                ret->str.capacity *= 2;
-                ret->str.ptr = realloc(ret->str.ptr, sizeof(char) * ret->str.capacity);
-                CHECK_ALLOC(ret->str.ptr);
-            }
-            ret->str.ptr[ret->str.len++] = *fmt++;
+            char c = *fmt++;
+            da_append(ret->str, c);
         }
 
     ret->str.capacity = ret->str.len;
