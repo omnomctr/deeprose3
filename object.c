@@ -74,6 +74,17 @@ Object *object_string_slice_new_cstr(const char *s)
     return object_string_slice_new(s, strlen(s));
 }
 
+char *object_string_slice_to_cstr(Object *str)
+{
+    assert(str->kind == O_STR);
+    size_t len = str->str.len;
+    char *s = malloc(sizeof(char) * (len + 1));
+    CHECK_ALLOC(s);
+    memcpy(s, str->str.ptr, len);
+    s[len] = '\0';
+    return s;
+}
+
 Object *object_ident_new(const char *s, size_t len)
 {
     Object *ret = object_string_slice_new(s, len);
@@ -167,7 +178,7 @@ Object *object_error_new(const char *fmt, ...)
 
     va_list ap;
     va_start(ap, fmt);
-    while (*fmt) 
+    while (*fmt) {
         if (*fmt == '%') {
             fmt++;
             switch (*fmt++) { 
@@ -205,6 +216,7 @@ Object *object_error_new(const char *fmt, ...)
             char c = *fmt++;
             da_append(ret->str, c);
         }
+    }
 
     ret->str.capacity = ret->str.len;
     ret->str.ptr = realloc(ret->str.ptr, sizeof(char) * ret->str.capacity);

@@ -14,7 +14,7 @@ int main(int argc, char *argv[])
     env_add_default_variables(env);
     eval_program(stdlib, env, false);
 
-    if (argc == 1 || argc == 2 && strcmp(argv[1], "-repl") == 0) {
+    if (argc == 1 || (argc == 2 && strcmp(argv[1], "-repl") == 0)) {
         /* set up readline */
         rl_bind_key('\t', rl_complete); // autocomplete when tab is hit
         using_history();

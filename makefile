@@ -1,5 +1,6 @@
 BUILDDIR = $(shell pwd)/.build
-CFLAGS = -Wall -lgmp -O3 -ldl -fpic
+CFLAGS = -Wall -O3 -ggdb
+SHAREDCFLAGS = $(CFLAGS) -lgmp -ldl -fpic
 CC = gcc
 
 all: $(BUILDDIR)/deeprose3
@@ -13,7 +14,7 @@ run:
 
 $(BUILDDIR)/%.o: %.c %.h
 	@mkdir -p $(BUILDDIR)
-	$(CC) $(CFLAGS) -c $^ 
+	$(CC) $(SHAREDCFLAGS) -c $^ 
 	mv *.o $(BUILDDIR)/
 	mv *.h.gch $(BUILDDIR)/
 
@@ -25,12 +26,12 @@ $(BUILDDIR)/stdlib.h: programs/stdlib.deeprose $(BUILDDIR)/create_stdlib_header
 	$(BUILDDIR)/create_stdlib_header <programs/stdlib.deeprose >$(BUILDDIR)/stdlib.h
 
 $(BUILDDIR)/deeprose3: $(BUILDDIR)/lib/libdeeprose.so main.c
-	gcc -L$(BUILDDIR)/lib -o $(BUILDDIR)/deeprose3 main.c -O3 -ldeeprose -lreadline -Wl,-rpath=$(BUILDDIR)/lib
+	gcc -L$(BUILDDIR)/lib -o $(BUILDDIR)/deeprose3 main.c -ldeeprose -lreadline -Wl,-rpath=$(BUILDDIR)/lib $(CFLAGS)
 
 $(BUILDDIR)/lib/libdeeprose.so: $(BUILDDIR)/lexer.o $(BUILDDIR)/arena.o $(BUILDDIR)/object.o $(BUILDDIR)/parser.o $(BUILDDIR)/eval.o $(BUILDDIR)/environment.o $(BUILDDIR)/stdlib.h $(BUILDDIR)/util.o
 	@mkdir -p $(BUILDDIR)
 	@mkdir -p $(BUILDDIR)/lib
-	$(CC) $(CFLAGS) -shared -o $@ $^
+	$(CC) $(SHAREDCFLAGS) -shared -o $@ $^
 
 clean:
 	rm -r $(BUILDDIR)/

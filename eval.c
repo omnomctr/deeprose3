@@ -169,7 +169,8 @@ Object *eval_expr(Env *e, Object *o)
 Object *eval(Env *e, Object *o)
 {
     if (setjmp(on_error_jmp_buf) != 0) {
-        return on_error_error;}
+        return on_error_error;
+    }
 
     return eval_expr(e, o);
 
@@ -688,14 +689,13 @@ static Object *_builtin_load(Env *e, Object *o)
     Object *file_path = eval_expr(e, o->list.car);
     EASSERT_TYPE("load", file_path, O_STR);
 
-    char *file_path_cstr = malloc(sizeof(char) * (file_path->str.len + 1));
-    CHECK_ALLOC(file_path_cstr);
-
-    memcpy(file_path_cstr, file_path->str.ptr, file_path->str.len);
-    file_path_cstr[file_path->str.len] = '\0';
+    char *file_path_cstr = object_string_slice_to_cstr(file_path);
 
     FILE *f = fopen(file_path_cstr, "r");
-    if (f == NULL) return object_error_new("load: couldn't open file");
+    if (f == NULL) {
+        free(file_path_cstr);
+        return object_error_new("load: couldn't open file");
+    }
     char *program = file_to_str(f);
     fclose(f);
     int status = eval_program(program, e, false);
@@ -792,13 +792,8 @@ static Object *_builtin_num(Env *e, Object *o)
 
     EASSERT(o->list.cdr->kind == O_NIL, "to many arguments passed to num");
 
+    char *cstr = object_string_slice_to_cstr(str);
     
-    char *cstr = malloc(sizeof(char) * (str->str.len + 1));
-    CHECK_ALLOC(cstr);
-
-    memcpy(cstr, str->str.ptr, str->str.len);
-    cstr[str->str.len] = '\0';
-
     Object *ret = object_num_new(0);
     if (mpz_set_str(ret->num, cstr, 10) != 0) {
         free(cstr);
@@ -985,11 +980,7 @@ static Object *_builtin_import_shared(Env *e, Object *o)
     Object *filename = eval_expr(e, o->list.car);
     EASSERT_TYPE("import-shared", filename, O_STR);
 
-    char *filename_cstr = malloc(sizeof(char) * (filename->str.len + 1));
-    CHECK_ALLOC(filename_cstr);
-
-    memcpy(filename_cstr, filename->str.ptr, filename->str.len);
-    filename_cstr[filename->str.len] = '\0';
+    char *filename_cstr = object_string_slice_to_cstr(filename);
 
     void *handle = dlopen(filename_cstr, RTLD_LAZY | RTLD_NODELETE); // we will keep the functions around after its dlclose'd
     free(filename_cstr);
@@ -1002,14 +993,18 @@ static Object *_builtin_import_shared(Env *e, Object *o)
         Object *to_import = eval_expr(e, cursor->list.car);
         EASSERT_TYPE("import-shared", to_import, O_STR);
         
-        char *to_import_cstr = malloc(sizeof(char) * (to_import->str.len + 1));
-        CHECK_ALLOC(to_import_cstr);
-        memcpy(to_import_cstr, to_import->str.ptr, to_import->str.len);
-        to_import_cstr[to_import->str.len] = '\0';
+        char *to_import_cstr = object_string_slice_to_cstr(to_import);
 
         Builtin f = dlsym(handle, to_import_cstr); 
-        EASSERT(f != NULL, "import-shared: could not find \"%s\": {%sc}", to_import, dlerror());
         free(to_import_cstr);
+        if (f == NULL) {
+            dlclose(handle);
+            return object_error_new("import-shared: could not find \"%s\"", to_import);
+            // I dont think dlerror's returned string's lifetime fits our usecase and I dont think
+            // its worth copying the string to an Object or something so well just not add the 
+            // extra dlerror diagnostic
+            //EASSERT(f != NULL, "import-shared: could not find \"%s\": {%sc}", to_import, dlerror());
+        }
         Object *f_ = object_builtin_new(f);
         env_put(e, object_ident_new(to_import->str.ptr, to_import->str.len), f_);
 

@@ -72,6 +72,8 @@ Object *object_new_generic(void);
 Object *object_list_new(Object *car, Object *cdr);
 Object *object_string_slice_new(const char *s, size_t len);
 Object *object_string_slice_new_cstr(const char *s);
+// returns malloc'ed zero-terminated "c string"
+char *object_string_slice_to_cstr(Object *str);
 Object *object_ident_new(const char *s, size_t len);
 Object *object_ident_new_cstr(const char *s);
 Object *object_num_new(int64_t num);
