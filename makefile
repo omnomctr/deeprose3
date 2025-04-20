@@ -1,5 +1,5 @@
 BUILDDIR = $(shell pwd)/.build
-CFLAGS = -Wall -O3 -ggdb
+CFLAGS = -Wall -O3
 SHAREDCFLAGS = $(CFLAGS) -lgmp -ldl -fpic
 CC = gcc
 

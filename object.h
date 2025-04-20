@@ -81,6 +81,7 @@ Object *object_num_new_token(Token *t);
 Object *object_nil_new(void);
 Object *object_builtin_new(Builtin f);
 const char *object_type_as_string(enum ObjectKind k);
+// WARNING: must have on_error jmpbuf set up before using
 Object *object_error_new(const char *fmt, ...);
 Object *object_error_new_from_string_slice(Object *o);
 Object *object_function_new(Env *e, Object *args, Object *body);

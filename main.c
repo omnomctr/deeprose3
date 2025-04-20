@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
 
         }
         GC_collect_garbage(NULL);
-
+        return 0;
     } else if (argc == 2) {
         FILE *f = fopen(argv[1], "r");
         if (f == NULL) { fprintf(stderr, "error opening file\n"); exit(-1); }
