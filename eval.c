@@ -54,6 +54,7 @@ static Object *_builtin_char_list(Env *e, Object *o);
 static Object *_builtin_string(Env *e, Object *o);
 static Object *_builtin_typeof(Env *e, Object *o);
 static Object *_builtin_import_shared(Env *e, Object *o);
+static Object *_builtin_read(Env *e, Object *o);
 
 typedef struct { const char *name; Builtin func; } builtin_record;
 builtin_record builtins[] = {
@@ -92,6 +93,7 @@ builtin_record builtins[] = {
     { "string", _builtin_string },
     { "type-of", _builtin_typeof },
     { "import-shared", _builtin_import_shared },
+    { "read", _builtin_read },
 };
 
 void env_add_default_variables(Env *e) 
@@ -1016,4 +1018,31 @@ static Object *_builtin_import_shared(Env *e, Object *o)
 }
 
 
+static Object *_builtin_read(Env *e, Object *o)
+{
+    EASSERT(o->kind == O_LIST, "read: needs one argument");
+    EASSERT(o->list.cdr->kind == O_NIL, "too many arguments passed to read");
+    Object *str = eval_expr(e, o->list.car);
+    EASSERT_TYPE("read", str, O_STR);
 
+    Arena *a = arena_new(sizeof(Parser) + sizeof(Lexer) + sizeof(Token) * 10 + (str->str.len + 1) * sizeof(char)); // approximate guess to how big the arena should be
+
+    // lexer uses cstring so we need to convert the string slice unfortunately
+    char *cstr = NULL;
+    {
+        size_t len = str->str.len;
+        cstr = arena_alloc(a, (len + 1) * sizeof(char));
+        memcpy(cstr, str->str.ptr, len);
+        cstr[len] = '\0';
+    }
+    assert(cstr);
+
+    Lexer *lex = lexer_new(cstr, a);
+    Parser *parser = parser_new(lex, a);
+
+    Object *ret = parser_parse(parser);
+    ret->eval = false;
+
+    arena_destroy(a);
+    return ret;
+}
