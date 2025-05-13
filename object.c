@@ -404,16 +404,21 @@ static void _GC_mark_object(Object *o)
     }
 }
 
+static void _GC_mark_evstore(EnvValueStore *evs) 
+{
+    _GC_mark_object(evs->ident);
+    _GC_mark_object(evs->value);
+
+    if (evs->left) _GC_mark_evstore(evs->left);
+    if (evs->right) _GC_mark_evstore(evs->right);
+}
+
 static void _GC_mark_env(Env *e) 
 {
     if (e->gc_mark == MARKED) return;
     e->gc_mark = MARKED;
-    EnvValueStore *cursor = e->store;
-    while (cursor != NULL) {
-        _GC_mark_object(cursor->ident);
-        _GC_mark_object(cursor->value);
-        cursor = cursor->next;
-    }
+    // mark items in the envstores
+    if (e->store) _GC_mark_evstore(e->store);
 
     if (e->parent) _GC_mark_env(e->parent);
 }

@@ -35,7 +35,10 @@ typedef struct EnvValueStore EnvValueStore;
 struct EnvValueStore {
     Object *ident;
     Object *value;
-    EnvValueStore *next; /* nullable */
+
+    /* binary tree for O(logn) lookup */
+    EnvValueStore *left; /* nullable, <ident */
+    EnvValueStore *right; /* nullable, >ident */
 };
 typedef struct Env Env;
 struct Env {
