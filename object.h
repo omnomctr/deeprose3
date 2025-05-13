@@ -46,6 +46,7 @@ struct Env {
     Mark gc_mark;
     Env *parent; /* nullable */
     EnvValueStore *store; /* nullable */
+    Arena *arena;
 };
 
 struct Function {

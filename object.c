@@ -367,13 +367,15 @@ void object_print(Object *o)
 
 Env *env_new(Env *parent)
 {
-    Env *ret = malloc(sizeof(Env));
+    Arena *a = arena_new(sizeof(EnvValueStore) * 10 + sizeof(Env));
+    Env *ret = arena_alloc(a, sizeof(Env));
     CHECK_ALLOC(ret);
     *ret = (Env) {
         .parent = parent,
         .store = NULL,
         .env_next = GC.env_list,
         .gc_mark = NOT_MARKED,
+        .arena = a,
     };
     GC.env_list = ret;
     GC.live_environments++;
