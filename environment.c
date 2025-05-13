@@ -34,10 +34,8 @@ static EnvValueStore *_evstore_insert(EnvValueStore *cur, Object *ident, Object 
 
     int cmp = _stringslice_cmp(ident->str, cur->ident->str);
     if (cmp == 0) /* equal */ {
-        *cur = (struct EnvValueStore) {
-            .ident = ident,
-            .value = val,
-        };
+        cur->ident = ident;
+        cur->value = val;
         return cur;
     } else if (cmp < 0) /* to_insert < cur */ {
         cur->left = _evstore_insert(cur->left, ident, val, a);
