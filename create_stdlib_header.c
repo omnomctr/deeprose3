@@ -7,26 +7,22 @@ int main(void)
         "#define STDLIB_HEADER__\n"
         "\n"
         "/* this code was generated using the \"script\" create_stdlib_header.c */\n"
+        "/* look at programs/stdlib.deeprose for original program */\n"
         "\n"
-        "const char * const stdlib = {\"");
+        "const char stdlib[] = {");
 
 
     int c;
     while ((c = getchar()) != EOF) {
-        switch (c) {
-            case '\n':
-                putchar('\\');
-                putchar('n');
-                continue;
-            case '\\': case '"': case '\'':
-                putchar('\\');
-                break;
+        if (c == ';') {
+            while ((c = getchar()) != '\n' && c != EOF) {}
+            continue;
         }
-        putchar(c);
+        printf("%d, ", (char)c);
     }
 
     printf(
-        "\"};\n"
+        "};\n"
         "\n"
         "#endif\n");
 
