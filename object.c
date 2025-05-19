@@ -159,7 +159,6 @@ static void _copy_slice_to_ss(struct StringSlice *s, const char *str, size_t len
     if (s->len + len >= s->capacity) {
         while (s->capacity < (s->len + len)) 
             s->capacity *= 2;
-        printf("realloc'ing error for size %zu\n", s->capacity);
         s->ptr = realloc(s->ptr, sizeof(char) * s->capacity);
         CHECK_ALLOC(s->ptr);
     }
