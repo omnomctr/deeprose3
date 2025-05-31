@@ -14,10 +14,9 @@
 (def list (\ (& xs) xs))
 
 (def range (\ (start end)
-    (if (= start end)
-        (list start)
-        (cons start 
-              (range (inc start) end)))))
+    (cond (= start end) (list start)
+     	  (> start end) (error "range: start > end")
+	  otherwise     (cons start (range (inc start) end)))))
 
 (def map (\ (f xs)
     (if (= nil xs)
