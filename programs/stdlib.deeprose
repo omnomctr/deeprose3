@@ -30,6 +30,12 @@
                                    (filter pred? (rest xs)))
           otherwise (filter pred? (rest xs)))))
 
+(def all? (\ (pred? xs)
+    (cond (nil? xs) (error "all: empty list")
+          (nil? (rest xs)) (pred? (first xs))
+          otherwise (and (pred? (first xs))
+                         (all? pred? (rest xs))))))
+
 (def foldr (\ (f accum xs)
     (if (nil? xs)
         accum
@@ -108,11 +114,12 @@
           concat-str (\ (strs)
                     (string (apply concat (map char-list strs)))))
       (cond (nil? xs) nil
-            (type-is? (first xs) 'string) (concat-str xs)
-            (or (type-is? (first xs) 'list)
-                (type-is? (first xs) 'nil))
+            (all? (\ (x) (type-is? x 'string)) xs) (concat-str xs)
+            (all? (\ (x) (or (type-is? x 'list)
+                             (type-is? x 'nil)))
+                  xs)
                   (foldr concat-list nil xs)
-            otherwise (error (concat "concat: expected string or list, got " (type-of (first xs)) "."))))))
+            otherwise (error (concat "concat: expected only strings or lists, got " (string (type-of (first xs))) "."))))))
 
 (def apply (\ (f xs)
     (eval (cons f xs))))
