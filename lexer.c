@@ -77,6 +77,7 @@ static inline void _print_token_string_slice(Token *t)
 
 void token_print(Token *t)
 {
+    printf("line %zu: ", t->line);
     switch (t->type) {
         case t_LPAREN: printf("{left parenthese}"); break;
         case t_RPAREN: printf("{right parenthese}"); break;
@@ -110,6 +111,7 @@ static void _lexer_skip_whitespace(Lexer *l)
             while (l->ch != '\n' && l->ch != '\0') {
                 _lexer_read_char(l);
             }
+            l->line_number++;
         }
         _lexer_read_char(l);
     }

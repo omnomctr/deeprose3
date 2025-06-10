@@ -17,6 +17,10 @@ typedef struct Parser {
     TokenLL *cursor;
 
     enum ParserError error;
+    size_t line;
+    size_t prevline; // terrible fix but we need to preserve
+                     // the previous token's line so the parser_parse
+                     // caller can get it. bad
 } Parser;
 
 Parser *parser_new(Lexer *l, Arena *a);

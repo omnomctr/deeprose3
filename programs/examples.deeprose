@@ -37,6 +37,3 @@
                   (list x)
                   (quicksort (filter (\ (n) (>= n x)) xs)))))))
         
-
-
-      

@@ -23,6 +23,7 @@ Parser *parser_new(Lexer *l, Arena *a)
     ret->input = lexer_collect_tokens(l);
     ret->cursor = ret->input;
     ret->error = PE_NO_ERROR;
+    ret->line = ret->cursor->token->line;
 
     return ret;
 }
@@ -31,6 +32,8 @@ inline static void _parser_next_token(Parser *p)
 {
     if (p->cursor == NULL || p->cursor->token->type == t_EOF) p->error = PE_UNEXPECTED_EOF;
     else p->cursor = p->cursor->next;
+    p->prevline = p->line;
+    p->line = p->cursor->token->line;
 }
 
 static Object *_parser_parse_expr(Parser *p)

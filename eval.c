@@ -125,8 +125,11 @@ int eval_program(const char *program, Env *env /*nullable*/, bool print_eval)
 
     Object *o = parser_parse(parser);
 
+    // TODO: make clean up parsing stage / eval_program. This 
+    // part of the program is by far the dirtiest
+
     for (;;) {
-        if (parser->error) printf("parser has error \"%s\"\n", parser_error_string(parser)); 
+        if (parser->error) printf("parser has error \"%s\", line %zu\n", parser_error_string(parser), parser->prevline); 
         else if (o == NULL) break;
         else {
             Object *evaled = eval(env, o);

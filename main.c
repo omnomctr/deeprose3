@@ -51,6 +51,7 @@ int main(int argc, char *argv[])
          * an error */
         eval_program("(main)", env, false);
         GC_collect_garbage(NULL);
+
         free(program);
         return status;
     }
