@@ -105,9 +105,9 @@ void token_print(Token *t)
 static void _lexer_skip_whitespace(Lexer *l)
 {
     while (l->ch == ' ' || l->ch == '\t' || l->ch == '\n' || l->ch == '\r' || l->ch == ';') {
+        if (l->ch == '\n') l->line_number++;
         if (l->ch == ';') {
             while (l->ch != '\n' && l->ch != '\0') {
-                l->line_number++;
                 _lexer_read_char(l);
             }
         }

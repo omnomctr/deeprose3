@@ -13,7 +13,6 @@
 (def get-question-choices (\ (question)
     (rest (rest question))))
 
-
 (def questions 
      (list (make-question "whats 1 + 2?" "c" "a) 1" "b) 2" "c) 3")
            (make-question "whats 8 + 5?" "b" "a) 10" "b) 13" "c) 15" "d) 12")))
@@ -45,4 +44,4 @@
                     (trivia-loop score (remove-current-question questions q))))))))))
 
 (def main (\ ()
-    (trivia-loop 0 questions))
+    (trivia-loop 0 questions)))

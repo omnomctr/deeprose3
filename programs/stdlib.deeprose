@@ -61,12 +61,17 @@
 (def sum (\ (xs) (apply + xs)))
 (def product (\ (xs) (apply * xs)))
 
-(def <= (\ (a b)
-    (or (< a b)
-        (= a b))))
-(def >= (\ (a b)
-    (or (> a b)
-        (= a b))))
+(def >= (\ (& xs)
+    (let (>=^ (\ (a b)
+            (or (> a b)
+                (= a b))))
+      (foldr (\ (x accum) (and accum (>=^ (first x) (next x)))) true (zip xs (drop 1 xs))))))
+
+(def <= (\ (& xs)
+    (let (<=^ (\ (a b)
+            (or (< a b)
+                (= a b))))
+      (foldr (\ (x accum) (and accum (<=^ (first x) (next x)))) true (zip xs (drop 1 xs))))))
 
 (def len (\ (xs)
     (if (nil? xs)
@@ -152,3 +157,21 @@
     (foldl (\ (f x) (f x)) x fs)))
 
 (def type-is? (\ (expr t) (= (type-of expr) t)))
+
+(def car first)
+(def cdr rest)
+
+(def cadr (compose car cdr))
+(def cdar (compose cdr car))
+(def caar (compose car car))
+(def cddr (compose cdr cdr))
+
+(def caaar (compose car car car))
+(def caadr (compose car car cdr))
+(def cadar (compose car cdr car))
+(def caddr (compose car cdr cdr))
+(def cdaar (compose cdr car car))
+(def cdadr (compose cdr car cdr))
+(def cddar (compose cdr cdr car))
+(def cdddr (compose cdr cdr cdr))
+
