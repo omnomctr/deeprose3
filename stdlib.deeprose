@@ -175,3 +175,5 @@
 (def cddar (compose cdr cdr car))
 (def cdddr (compose cdr cdr cdr))
 
+(def const (\ (val)
+    (\ (& dummy) val)))
