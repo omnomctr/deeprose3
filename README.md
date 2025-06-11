@@ -1,6 +1,6 @@
 # deeprose3
 
-lisp-based language. Look at the example programs and standard library in [programs/](https://github.com/omnomctr/deeprose3/tree/main/programs).
+lisp-based language. Look at the example programs in [programs/](https://github.com/omnomctr/deeprose3/tree/main/programs).
 You can see all builtin functions / special forms in eval.c's builtins[].
 
 has a garbage collector, lists as first class citizens, higher order functions and extensibility with the C programming language

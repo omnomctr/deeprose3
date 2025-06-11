@@ -22,8 +22,8 @@ $(BUILDDIR)/create_stdlib_header: create_stdlib_header.c
 	@mkdir -p $(BUILDDIR)
 	$(CC) create_stdlib_header.c -o $(BUILDDIR)/create_stdlib_header
 
-$(BUILDDIR)/stdlib.h: programs/stdlib.deeprose $(BUILDDIR)/create_stdlib_header
-	$(BUILDDIR)/create_stdlib_header <programs/stdlib.deeprose >$(BUILDDIR)/stdlib.h
+$(BUILDDIR)/stdlib.h: stdlib.deeprose $(BUILDDIR)/create_stdlib_header
+	$(BUILDDIR)/create_stdlib_header <stdlib.deeprose >$(BUILDDIR)/stdlib.h
 
 $(BUILDDIR)/deeprose3: $(BUILDDIR)/lib/libdeeprose.so main.c
 	gcc -L$(BUILDDIR)/lib -o $(BUILDDIR)/deeprose3 main.c -ldeeprose -lreadline -Wl,-rpath=$(BUILDDIR)/lib $(CFLAGS)
