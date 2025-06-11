@@ -37,3 +37,4 @@ grep -rn "TODO" *.[ch]
 ```
 * add dynamic loading with `dlopen`? **DONE**
 * add namespaces maybe
+* gut and replace parser with something less awfull (maybe yacc?)
