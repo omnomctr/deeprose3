@@ -46,14 +46,26 @@
         accum 
         (foldl f (f (first xs) accum) (rest xs)))))
 
-(def zip-with (\ (f xs ys)
-    (if (or (nil? xs) (nil? ys))
-        nil
-        (cons (f (first xs) (first ys)) 
-              (zip-with f (rest xs) (rest ys))))))
+; TODO: fix bug relating to apply / evaluating lists of lists
+; in scheme this would work:
+;   (define (zip-with f . xss)
+;     ; pretend all? is a proc we wrote
+;     (if (not (all? (lambda (xs) (not (null? xs))) xss)) '()
+;         (cons (apply f (map car xss))
+;         (apply zip-with (cons f (map cdr xss))))))
+; due to some big hidden in evaluation / quotation
+; that does not work in deeprose. Instead, we must make a helper
+; function that works with the arguments as lists
 
-(def zip (\ (xs ys)
-    (zip-with list xs ys)))
+(def zip-with (\ (f & xss)
+    (let (zip-with^ (\ (f xss)
+            (if (not (all? (compose not nil?) xss)) nil
+              (cons (apply f (map first xss))
+                    (zip-with^ f (map rest xss))))))
+      (zip-with^ f xss))))
+
+(def zip (\ (& xss)
+    (apply zip-with (cons list xss))))
 
 (def even? (\ (n) (= (mod n 2) 0)))
 (def odd? (\ (n) (not (even? n))))
