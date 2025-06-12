@@ -53,7 +53,7 @@
 ;     (if (not (all? (lambda (xs) (not (null? xs))) xss)) '()
 ;         (cons (apply f (map car xss))
 ;         (apply zip-with (cons f (map cdr xss))))))
-; due to some big hidden in evaluation / quotation
+; due to some bug hidden in evaluation / quotation
 ; that does not work in deeprose. Instead, we must make a helper
 ; function that works with the arguments as lists
 
