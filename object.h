@@ -27,7 +27,8 @@ struct List {
 #define ERROR_NUM_MAX_STR_SIZE 256
 
 enum ObjectKind {
-    O_STR, O_NUM, O_LIST, O_IDENT, O_NIL, O_ERROR, O_BUILTIN, O_FUNCTION, O_CHAR,
+    O_NIL = 0,
+    O_STR, O_NUM, O_LIST, O_IDENT, O_ERROR, O_BUILTIN, O_FUNCTION, O_CHAR,
 };
 
 

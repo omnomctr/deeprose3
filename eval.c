@@ -392,6 +392,9 @@ static Object *_eval_sexpr(Env *e, Object *o)
         }
         Env *env = env_new(f->function.env);
         
+        Object *funcname = o->list.car->kind == O_IDENT ? o->list.car : object_string_slice_new_cstr("<anonymous>");
+        //Object *funcname = object_string_slice_new_cstr("<anonymous>");
+
         bool variadic = false;
         {
             Object *cursor = f->function.arguments;
@@ -413,7 +416,7 @@ static Object *_eval_sexpr(Env *e, Object *o)
                     break;
                 }
                 if (args_cursor->kind == O_NIL) {
-                    return object_error_new("function %s passed too few values", o->list.car);
+                    return object_error_new("function %s passed too few values", funcname);
                 }
                 EASSERT(args_cursor->kind == O_LIST, "invalid function call form");
                 env_put(env, cursor->list.car, eval_expr(e, args_cursor->list.car));
@@ -422,7 +425,7 @@ static Object *_eval_sexpr(Env *e, Object *o)
                 args_cursor = args_cursor->list.cdr;
             }
             if (!variadic && args_cursor->kind != O_NIL) {
-                return object_error_new("function %s passed too many values", o->list.car);
+                return object_error_new("function %s passed too many values", funcname);
             }
         }
 
@@ -502,7 +505,7 @@ static Object *_builtin_equals(Env *e, Object *o)
 {
     EASSERT(o->kind == O_LIST, "=: needs two arguments");
     Object *a = eval_expr(e, o->list.car);
-    EASSERT(o->list.cdr->kind, "=: needs two arguments");
+    EASSERT(o->list.cdr->kind != O_NIL, "=: needs two arguments");
     Object *b = eval_expr(e, o->list.cdr->list.car);
     EASSERT(o->list.cdr->list.cdr->kind == O_NIL, "too many arguments passed to =");
 
