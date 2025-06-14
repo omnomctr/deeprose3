@@ -65,7 +65,13 @@
       (zip-with^ f xss))))
 
 (def zip (\ (& xss)
-    (apply zip-with (cons list xss))))
+    (let (zip^ (\ (xss)
+            (if (not (all? (compose not nil?) xss)) nil
+              (cons (apply list (map first xss))
+                    (zip^ (map rest xss))))))
+      ; we need to make a helper function to avoid
+      ; apply unfortunately
+      (zip^ xss))
 
 (def even? (\ (n) (= (mod n 2) 0)))
 (def odd? (\ (n) (not (even? n))))
