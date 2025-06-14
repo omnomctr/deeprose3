@@ -152,10 +152,7 @@
           (for-each f (rest xs))))))
 
 (def reverse (\ (xs)
-    (if (nil? xs)
-        nil
-        (concat (reverse (rest xs))
-                (list (first xs))))))
+    (foldl (\ (e accum) (cons e accum)) nil xs)))
 
 (def next (\ (xs)
     (first (rest xs))))
@@ -189,3 +186,4 @@
 
 (def const (\ (val)
     (\ (& dummy) val)))
+
