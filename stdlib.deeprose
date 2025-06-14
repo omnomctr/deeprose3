@@ -71,7 +71,7 @@
                     (zip^ (map rest xss))))))
       ; we need to make a helper function to avoid
       ; apply unfortunately
-      (zip^ xss))
+      (zip^ xss))))
 
 (def even? (\ (n) (= (mod n 2) 0)))
 (def odd? (\ (n) (not (even? n))))
