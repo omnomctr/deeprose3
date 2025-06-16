@@ -83,13 +83,13 @@
     (let (>=^ (\ (a b)
             (or (> a b)
                 (= a b))))
-      (foldr (\ (x accum) (and accum (>=^ (first x) (next x)))) true (zip xs (drop 1 xs))))))
+      (all? (\ (x) (>=^ (car x) (cadr x))) (zip xs (drop 1 xs))))))
 
 (def <= (\ (& xs)
     (let (<=^ (\ (a b)
             (or (< a b)
                 (= a b))))
-      (foldr (\ (x accum) (and accum (<=^ (first x) (next x)))) true (zip xs (drop 1 xs))))))
+      (all? (\ (x) (<=^ (car x) (cadr x))) (zip xs (drop 1 xs))))))
 
 (def len (\ (xs)
     (if (nil? xs)
