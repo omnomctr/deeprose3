@@ -22,7 +22,6 @@ static EnvValueStore *_evstore_insert(EnvValueStore *cur, Object *ident, Object 
 {
     if (cur == NULL) {
         EnvValueStore *to_insert = arena_alloc(a, sizeof(EnvValueStore));
-        CHECK_ALLOC(to_insert);
         
         *to_insert = (struct EnvValueStore) {
             .ident = ident,
