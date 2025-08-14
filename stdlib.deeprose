@@ -158,7 +158,7 @@
           (for-each f (rest xs))))))
 
 (def reverse (\ (xs)
-    (foldl (\ (e accum) (cons e accum)) nil xs)))
+    (foldl cons nil xs)))
 
 (def next (\ (xs)
     (first (rest xs))))
