@@ -19,8 +19,7 @@
 	  otherwise     (cons start (range (inc start) end)))))
 
 (def map (\ (f xs)
-    (if (= nil xs)
-        nil
+    (and xs
         (cons (f (first xs))
               (map f (rest xs))))))
 
@@ -152,8 +151,7 @@
       (foldr (\ (f x) (f x)) x fs))))
 
 (def for-each (\ (f xs)
-    (if (nil? xs)
-        nil
+    (and xs
         (do (f (first xs))
           (for-each f (rest xs))))))
 

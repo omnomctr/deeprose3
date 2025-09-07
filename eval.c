@@ -641,24 +641,28 @@ static Object *_builtin_not(Env *e, Object *o)
 
 static Object *_builtin_and(Env *e, Object *o)
 {
-    while (o->kind == O_LIST) {
+    EASSERT(o->kind == O_LIST, "and: needs an argument");
+
+    for (;;) {
         Object *boolean = eval_expr(e, o->list.car);
-        if (boolean->kind == O_NIL) return boolean;
-        o = o->list.cdr;
+        if (boolean->kind == O_NIL || o->list.cdr->kind == O_NIL) return boolean;
+        else o = o->list.cdr;
     }
 
-    return object_num_new(1);
+    assert(0 && "unreachable");
 }
 
 static Object *_builtin_or(Env *e, Object *o)
 {
-    while (o->kind == O_LIST) {
+    EASSERT(o->kind == O_LIST, "or: needs an argument");
+
+    for (;;) {
         Object *boolean = eval_expr(e, o->list.car);
-        if (boolean->kind != O_NIL) return boolean;
+        if (boolean->kind != O_NIL || o->list.cdr->kind == O_NIL) return boolean;
         o = o->list.cdr;
     }
 
-    return object_nil_new();
+    assert(0 && "unreachable");
 }
 
 static Object *_builtin_lt(Env *e, Object *o)

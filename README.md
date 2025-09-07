@@ -7,8 +7,7 @@ has a garbage collector, lists as first class citizens, higher order functions a
 
 ```lisp
 (def quicksort (\ (xs)
-    (if (nil? xs) 
-        (list)
+    (and xs
         (let (x (first xs)
               xs (rest xs))
           (concat (quicksort (filter (\ (n) (< n x)) xs))
